@@ -39,6 +39,7 @@ const tdLocaleMap: Record<string, object> = {
 
 const tdGlobalConfig = computed(() => tdLocaleMap[locale.value] || enUSConfig)
 
+// 把 URL 里的 Base64URL 还原成登录结果对象
 const decodeOIDCResult = (encoded: string) => {
   const normalized = encoded.replace(/-/g, '+').replace(/_/g, '/')
   const padded = normalized + '='.repeat((4 - normalized.length % 4) % 4)
@@ -47,18 +48,22 @@ const decodeOIDCResult = (encoded: string) => {
   return JSON.parse(new TextDecoder().decode(bytes))
 }
 
+// 把带 token 的地址从地址栏和历史记录里抹掉
 const clearOIDCCallbackState = (path = '/') => {
   window.history.replaceState({}, document.title, path)
 }
-
+// 从后端获取 OIDC 登录后的信息，之后填到前端信息中
 const syncOIDCUserContext = async () => {
+  // 获取目前的用户信息
   const currentUserResponse = await getCurrentUser()
   if (!currentUserResponse.success || !currentUserResponse.data?.user) {
     throw new Error(currentUserResponse.message || 'Failed to get user information')
   }
 
   const { user, tenant, memberships, capabilities } = currentUserResponse.data
+  // 把用户名、ID、系统管理员标记写进 store，并保存到 localStorage。
   authStore.setUser(userInfoFromApi(user, tenant?.id))
+  // 填「我在哪个空间、空间长什么样」，侧栏顶部显示「研发空间」、存储用量条、空间设置页，全靠这个。
   if (tenant) {
     authStore.setTenant({
       id: String(tenant.id) || '',
@@ -75,20 +80,14 @@ const syncOIDCUserContext = async () => {
   } else {
     authStore.setTenant(null)
   }
-  // Refresh memberships so currentTenantRole reflects any role change
-  // since the last login (e.g. an Owner demoted us to Viewer in a
-  // peer tenant). Without this, memberships stay frozen at the
-  // login-time snapshot and the UI silently lies about our authority.
+  // 填「我的角色和权限」,内部存储的是用户在所属空间内的身份，是 Admin 还是 Viewer。
   if (Array.isArray(memberships)) {
     authStore.setMemberships(memberships)
   }
   if (typeof capabilities?.can_create_tenant === 'boolean') {
     authStore.setCanCreateTenant(capabilities.can_create_tenant)
   }
-  // Same active-vs-home reconciliation as Login.vue: if the OIDC login
-  // landed us in a non-home tenant (because the backend honoured a
-  // remembered last-active-tenant preference) make sure X-Tenant-ID
-  // override is set; otherwise drop any stale override.
+  // 判断在哪个空间，并放置进去
   const activeIdNum = tenant?.id != null ? Number(tenant.id) : NaN
   const homeIdNum = user.tenant_id != null ? Number(user.tenant_id) : NaN
   if (Number.isFinite(activeIdNum) && Number.isFinite(homeIdNum) && activeIdNum !== homeIdNum) {
@@ -99,15 +98,18 @@ const syncOIDCUserContext = async () => {
 }
 
 const persistOIDCLoginResponse = async (response: any) => {
+  // 判断是否有 token
   if (!response.token) {
     throw new Error(response.message || 'OIDC login failed')
   }
 
+  // 把 token 存到 Pinia + loaclStorage 中，refresh_token 是可选的，所以加 if。有了它，access token 过期时才能静默续期。
   authStore.setToken(response.token)
   if (response.refresh_token) {
     authStore.setRefreshToken(response.refresh_token)
   }
 
+  // 这里就是调用上面的 syncOIDCUserContext，拿着 token 去询问后端用户的信息 
   await syncOIDCUserContext()
 
   // OIDC 跳转前暂存的邀请 token：拿到会话后兑换并进入对应空间。
@@ -123,21 +125,26 @@ const persistOIDCLoginResponse = async (response: any) => {
     return
   }
 
+  // 普通跳转
   await nextTick()
   router.replace(authStore.hasValidTenant ? '/platform/knowledge-bases' : '/onboarding/workspace')
 }
 
 const handleGlobalOIDCCallback = async () => {
+  // 取 hash，看是否有，如果没有就是普通访问，直接 return
   const hash = window.location.hash.startsWith('#') ? window.location.hash.slice(1) : ''
   if (!hash) return
 
+  // 解析参数，解析 hash 中的参数
   const params = new URLSearchParams(hash)
   const oidcError = params.get('oidc_error')
   const oidcErrorDescription = params.get('oidc_error_description')
   const oidcResult = params.get('oidc_result')
 
+  // 不是回调就退出（最常见的路径）
   if (!oidcError && !oidcResult) return
 
+  // 错误分支
   if (oidcError) {
     clearOIDCCallbackState('/login')
     await router.replace('/login')
@@ -153,6 +160,7 @@ const handleGlobalOIDCCallback = async () => {
       return
     }
 
+    // 成功分支
     const response = decodeOIDCResult(oidcResult)
     if (response.success) {
       clearOIDCCallbackState('/')
@@ -161,6 +169,7 @@ const handleGlobalOIDCCallback = async () => {
       return
     }
 
+    // 业务失败分支
     clearOIDCCallbackState('/login')
     await router.replace('/login')
     MessagePlugin.error(response.message || 'OIDC login failed')
