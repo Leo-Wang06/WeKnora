@@ -1,6 +1,9 @@
 {
-    "lastAnalyzedAt":  "2026-11-07T07:28:50.6280509Z",
+    "lastAnalyzedAt":  "2026-11-08T09:11:13.1212955Z",
     "version":  "1.0.0",
-    "analyzedFiles":  6,
-    "gitCommitHash":  "de8febd3f400c52aa73fbbd5235ce281f5388ec7"
+    "analyzedFiles":  17,
+    "gitCommitHash":  "a8919c12fcc01c05e4f9e2bebf4e888078827278",
+    "scope":  "WeKnora Auth Core Full Stack",
+    "nodes":  80,
+    "edges":  153
 }

@@ -1,19 +1,23 @@
 {
   "version": "1.0.0",
   "project": {
-    "name": "WeKnora Frontend Auth Core",
+    "name": "WeKnora Auth Core Full Stack",
     "languages": [
       "Vue",
-      "TypeScript"
+      "TypeScript",
+      "Go"
     ],
     "frameworks": [
       "Vue 3",
       "Pinia",
       "Vue Router",
-      "TDesign"
+      "TDesign",
+      "Gin",
+      "GORM",
+      "JWT"
     ],
-    "description": "WeKnora 前端启动与认证链路的小范围中文知识图谱。",
-    "analyzedAt": "2026-11-07T07:28:41.900Z",
+    "description": "WeKnora 前端启动、认证状态与 Go 后端路由、中间件、Handler、Service、Repository 之间的统一 Auth Core 关系图。",
+    "analyzedAt": "2026-11-08T09:09:11.720Z",
     "gitCommitHash": "de8febd3f400c52aa73fbbd5235ce281f5388ec7"
   },
   "nodes": [
@@ -349,6 +353,921 @@
         "错误映射"
       ],
       "complexity": "moderate"
+    },
+    {
+      "id": "file:../../../internal/router/routes_auth_tenant.go",
+      "type": "file",
+      "name": "routes_auth_tenant.go",
+      "filePath": "../../../internal/router/routes_auth_tenant.go",
+      "summary": "Gin 认证路由注册层：把 /api/v1/auth/* 地址映射到 AuthHandler，并声明 API Key 与公开路由策略。",
+      "tags": [
+        "gin",
+        "路由注册",
+        "auth"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:../../../internal/middleware/auth.go",
+      "type": "file",
+      "name": "auth.go",
+      "filePath": "../../../internal/middleware/auth.go",
+      "summary": "全局认证中间件：处理公开端点、Bearer JWT、API Key、活动租户与角色解析。",
+      "tags": [
+        "middleware",
+        "jwt",
+        "多租户"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:../../../internal/middleware/auth_context.go",
+      "type": "file",
+      "name": "auth_context.go",
+      "filePath": "../../../internal/middleware/auth_context.go",
+      "summary": "认证上下文写入器：同步维护 Gin Keys 与 Go request context 中的用户、租户、角色和 Principal。",
+      "tags": [
+        "context",
+        "身份传播",
+        "gin"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:../../../internal/handler/auth.go",
+      "type": "file",
+      "name": "auth.go",
+      "filePath": "../../../internal/handler/auth.go",
+      "summary": "认证 HTTP Handler：校验输入、调用 UserService，并将登录、OIDC、刷新和用户信息转换为 HTTP 响应。",
+      "tags": [
+        "handler",
+        "认证",
+        "oidc"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:../../../internal/application/service/user.go",
+      "type": "file",
+      "name": "user.go",
+      "filePath": "../../../internal/application/service/user.go",
+      "summary": "用户认证业务服务：校验密码、签发和轮换 Token、OIDC 登录、会话用户读取与成员关系聚合。",
+      "tags": [
+        "service",
+        "认证业务",
+        "token"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:../../../internal/application/repository/user.go",
+      "type": "file",
+      "name": "user.go",
+      "filePath": "../../../internal/application/repository/user.go",
+      "summary": "用户与认证 Token 的 GORM Repository：读写 users、auth_tokens 并执行会话撤销。",
+      "tags": [
+        "repository",
+        "gorm",
+        "持久化"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:../../../internal/types/user.go",
+      "type": "file",
+      "name": "user.go",
+      "filePath": "../../../internal/types/user.go",
+      "summary": "认证领域模型与接口 DTO：User、AuthToken、登录/OIDC 请求响应结构。",
+      "tags": [
+        "domain-model",
+        "dto",
+        "auth"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:../../../internal/types/tenant_member.go",
+      "type": "file",
+      "name": "tenant_member.go",
+      "filePath": "../../../internal/types/tenant_member.go",
+      "summary": "租户成员与 Membership 投影模型，为前端角色和空间切换提供数据契约。",
+      "tags": [
+        "domain-model",
+        "membership",
+        "rbac"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:POST:/api/v1/auth/login",
+      "type": "endpoint",
+      "name": "POST /api/v1/auth/login",
+      "summary": "本地账号密码登录，返回用户、活动空间、成员关系和双 Token。",
+      "tags": [
+        "http",
+        "认证端点",
+        "public"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "endpoint:GET:/api/v1/auth/oidc/url",
+      "type": "endpoint",
+      "name": "GET /api/v1/auth/oidc/url",
+      "summary": "生成 OIDC 授权地址、state、Nonce 与 PKCE 浏览器绑定。",
+      "tags": [
+        "http",
+        "认证端点",
+        "public"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "endpoint:GET:/api/v1/auth/oidc/callback",
+      "type": "endpoint",
+      "name": "GET /api/v1/auth/oidc/callback",
+      "summary": "接收 IdP 回调，完成本地登录并通过 URL hash 返回前端。",
+      "tags": [
+        "http",
+        "认证端点",
+        "public"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "endpoint:POST:/api/v1/auth/auto-setup",
+      "type": "endpoint",
+      "name": "POST /api/v1/auth/auto-setup",
+      "summary": "Lite 桌面端使用进程级凭据自动初始化登录。",
+      "tags": [
+        "http",
+        "认证端点",
+        "public-desktop"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "endpoint:POST:/api/v1/auth/refresh",
+      "type": "endpoint",
+      "name": "POST /api/v1/auth/refresh",
+      "summary": "验证并轮换 Refresh Token。",
+      "tags": [
+        "http",
+        "认证端点",
+        "public-token"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "endpoint:GET:/api/v1/auth/me",
+      "type": "endpoint",
+      "name": "GET /api/v1/auth/me",
+      "summary": "从认证上下文返回当前用户、活动租户、成员关系和能力。",
+      "tags": [
+        "http",
+        "认证端点",
+        "authenticated"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "endpoint:POST:/api/v1/auth/change-password",
+      "type": "endpoint",
+      "name": "POST /api/v1/auth/change-password",
+      "summary": "校验旧密码、更新密码并撤销用户全部会话。",
+      "tags": [
+        "http",
+        "认证端点",
+        "authenticated"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:../../../internal/router/routes_auth_tenant.go:RegisterAuthRoutes",
+      "type": "function",
+      "name": "RegisterAuthRoutes",
+      "filePath": "../../../internal/router/routes_auth_tenant.go",
+      "lineRange": [
+        212,
+        241
+      ],
+      "summary": "注册全部认证 HTTP 路由，并为 /auth/me 声明 API Key 兼容策略。",
+      "tags": [
+        "router",
+        "路由表",
+        "gin"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:../../../internal/middleware/auth.go:isNoAuthAPI",
+      "type": "function",
+      "name": "isNoAuthAPI",
+      "filePath": "../../../internal/middleware/auth.go",
+      "lineRange": [
+        65,
+        78
+      ],
+      "summary": "按路径和方法判断请求是否可绕过身份认证。",
+      "tags": [
+        "公开路由",
+        "白名单",
+        "验证"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:../../../internal/middleware/auth.go:Auth",
+      "type": "function",
+      "name": "Auth",
+      "filePath": "../../../internal/middleware/auth.go",
+      "lineRange": [
+        127,
+        192
+      ],
+      "summary": "按公开路由、JWT、内部调度和 API Key 顺序认证请求。",
+      "tags": [
+        "middleware",
+        "认证入口",
+        "jwt"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:../../../internal/middleware/auth.go:authenticateJWTUser",
+      "type": "function",
+      "name": "authenticateJWTUser",
+      "filePath": "../../../internal/middleware/auth.go",
+      "lineRange": [
+        236,
+        307
+      ],
+      "summary": "解析目标租户和成员角色，并将已验证身份写入请求上下文。",
+      "tags": [
+        "jwt",
+        "租户解析",
+        "rbac"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:../../../internal/middleware/auth_context.go:applyAuthSession",
+      "type": "function",
+      "name": "applyAuthSession",
+      "filePath": "../../../internal/middleware/auth_context.go",
+      "lineRange": [
+        53,
+        92
+      ],
+      "summary": "将 User、Tenant、Role、Principal 同步写入 Gin 与 Go Context。",
+      "tags": [
+        "context",
+        "身份传播",
+        "单一写入点"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:../../../internal/handler/auth.go:Login",
+      "type": "function",
+      "name": "Login",
+      "filePath": "../../../internal/handler/auth.go",
+      "lineRange": [
+        260,
+        302
+      ],
+      "summary": "绑定登录参数并调用 UserService.Login，输出统一认证响应。",
+      "tags": [
+        "handler",
+        "登录",
+        "输入校验"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:../../../internal/handler/auth.go:GetOIDCAuthorizationURL",
+      "type": "function",
+      "name": "GetOIDCAuthorizationURL",
+      "filePath": "../../../internal/handler/auth.go",
+      "lineRange": [
+        315,
+        338
+      ],
+      "summary": "验证 redirect_uri，生成 OIDC 地址并设置 Nonce/PKCE HttpOnly Cookie。",
+      "tags": [
+        "handler",
+        "oidc",
+        "cookie"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:../../../internal/handler/auth.go:OIDCRedirectCallback",
+      "type": "function",
+      "name": "OIDCRedirectCallback",
+      "filePath": "../../../internal/handler/auth.go",
+      "lineRange": [
+        429,
+        481
+      ],
+      "summary": "校验 OIDC state、交换 code，并把本地登录结果编码进前端 hash。",
+      "tags": [
+        "handler",
+        "oidc回调",
+        "重定向"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:../../../internal/handler/auth.go:RefreshToken",
+      "type": "function",
+      "name": "RefreshToken",
+      "filePath": "../../../internal/handler/auth.go",
+      "lineRange": [
+        599,
+        631
+      ],
+      "summary": "绑定刷新令牌并调用服务轮换 Access/Refresh Token。",
+      "tags": [
+        "handler",
+        "token刷新",
+        "输入校验"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:../../../internal/handler/auth.go:GetCurrentUser",
+      "type": "function",
+      "name": "GetCurrentUser",
+      "filePath": "../../../internal/handler/auth.go",
+      "lineRange": [
+        643,
+        699
+      ],
+      "summary": "从上下文读取用户和活动租户，聚合 memberships 与 capabilities。",
+      "tags": [
+        "handler",
+        "auth-me",
+        "能力投影"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:../../../internal/handler/auth.go:ChangePassword",
+      "type": "function",
+      "name": "ChangePassword",
+      "filePath": "../../../internal/handler/auth.go",
+      "lineRange": [
+        776,
+        828
+      ],
+      "summary": "读取上下文用户，校验请求并调用安全密码轮换服务。",
+      "tags": [
+        "handler",
+        "密码修改",
+        "会话撤销"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:../../../internal/handler/auth.go:AutoSetup",
+      "type": "function",
+      "name": "AutoSetup",
+      "filePath": "../../../internal/handler/auth.go",
+      "lineRange": [
+        925,
+        1007
+      ],
+      "summary": "验证 Lite 桌面令牌，按需注册用户并返回登录会话。",
+      "tags": [
+        "handler",
+        "lite",
+        "自动登录"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:../../../internal/application/service/user.go:Login",
+      "type": "function",
+      "name": "Login",
+      "filePath": "../../../internal/application/service/user.go",
+      "lineRange": [
+        231,
+        310
+      ],
+      "summary": "按邮箱查找用户、验证密码、解析活动空间、签发 Token 并构建 Membership。",
+      "tags": [
+        "service",
+        "密码认证",
+        "token"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:../../../internal/application/service/user.go:BuildLoginMemberships",
+      "type": "function",
+      "name": "BuildLoginMemberships",
+      "filePath": "../../../internal/application/service/user.go",
+      "lineRange": [
+        323,
+        329
+      ],
+      "summary": "将 tenant_members 投影成前端登录响应使用的空间角色列表。",
+      "tags": [
+        "service",
+        "membership",
+        "数据投影"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:../../../internal/application/service/user.go:GetOIDCAuthorizationURL",
+      "type": "function",
+      "name": "GetOIDCAuthorizationURL",
+      "filePath": "../../../internal/application/service/user.go",
+      "lineRange": [
+        438,
+        495
+      ],
+      "summary": "读取 OIDC 配置，签名 state 并生成 PKCE 授权地址。",
+      "tags": [
+        "service",
+        "oidc",
+        "pkce"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:../../../internal/application/service/user.go:LoginWithOIDC",
+      "type": "function",
+      "name": "LoginWithOIDC",
+      "filePath": "../../../internal/application/service/user.go",
+      "lineRange": [
+        501,
+        580
+      ],
+      "summary": "交换 OIDC code、解析用户、按需开户并签发本地会话。",
+      "tags": [
+        "service",
+        "oidc登录",
+        "用户开户"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:../../../internal/application/service/user.go:ChangePassword",
+      "type": "function",
+      "name": "ChangePassword",
+      "filePath": "../../../internal/application/service/user.go",
+      "lineRange": [
+        782,
+        822
+      ],
+      "summary": "验证旧密码和密码策略，更新哈希并撤销全部 Token。",
+      "tags": [
+        "service",
+        "密码安全",
+        "token撤销"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:../../../internal/application/service/user.go:RefreshToken",
+      "type": "function",
+      "name": "RefreshToken",
+      "filePath": "../../../internal/application/service/user.go",
+      "lineRange": [
+        1500,
+        1555
+      ],
+      "summary": "验证 JWT 类型和数据库 Token 记录，撤销旧 Token 后生成新会话。",
+      "tags": [
+        "service",
+        "token轮换",
+        "jwt"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:../../../internal/application/service/user.go:GetCurrentUser",
+      "type": "function",
+      "name": "GetCurrentUser",
+      "filePath": "../../../internal/application/service/user.go",
+      "lineRange": [
+        1583,
+        1590
+      ],
+      "summary": "从认证中间件写入的 Context 获取当前 User。",
+      "tags": [
+        "service",
+        "context",
+        "当前用户"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:../../../internal/application/repository/user.go:GetUserByID",
+      "type": "function",
+      "name": "GetUserByID",
+      "filePath": "../../../internal/application/repository/user.go",
+      "lineRange": [
+        57,
+        87
+      ],
+      "summary": "按 ID 查询用户记录。",
+      "tags": [
+        "repository",
+        "users",
+        "查询"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:../../../internal/application/repository/user.go:GetUserByEmail",
+      "type": "function",
+      "name": "GetUserByEmail",
+      "filePath": "../../../internal/application/repository/user.go",
+      "lineRange": [
+        89,
+        99
+      ],
+      "summary": "按邮箱查询登录用户。",
+      "tags": [
+        "repository",
+        "users",
+        "查询"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:../../../internal/application/repository/user.go:UpdateUser",
+      "type": "function",
+      "name": "UpdateUser",
+      "filePath": "../../../internal/application/repository/user.go",
+      "lineRange": [
+        127,
+        144
+      ],
+      "summary": "持久化用户信息、密码哈希与偏好。",
+      "tags": [
+        "repository",
+        "users",
+        "写入"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:../../../internal/application/repository/user.go:GetTokenByValue",
+      "type": "function",
+      "name": "GetTokenByValue",
+      "filePath": "../../../internal/application/repository/user.go",
+      "lineRange": [
+        412,
+        422
+      ],
+      "summary": "按 Token 值读取 auth_tokens 会话记录。",
+      "tags": [
+        "repository",
+        "auth-tokens",
+        "查询"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:../../../internal/application/repository/user.go:UpdateToken",
+      "type": "function",
+      "name": "UpdateToken",
+      "filePath": "../../../internal/application/repository/user.go",
+      "lineRange": [
+        445,
+        448
+      ],
+      "summary": "持久化 Token 撤销状态。",
+      "tags": [
+        "repository",
+        "auth-tokens",
+        "写入"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "function:../../../internal/application/repository/user.go:RevokeTokensByUserID",
+      "type": "function",
+      "name": "RevokeTokensByUserID",
+      "filePath": "../../../internal/application/repository/user.go",
+      "lineRange": [
+        460,
+        470
+      ],
+      "summary": "批量撤销指定用户的所有有效 Token。",
+      "tags": [
+        "repository",
+        "auth-tokens",
+        "会话撤销"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "type:../../../internal/types/user.go:User",
+      "type": "type",
+      "name": "User",
+      "filePath": "../../../internal/types/user.go",
+      "lineRange": [
+        109,
+        142
+      ],
+      "summary": "用户持久化实体与认证上下文主体。",
+      "tags": [
+        "user",
+        "entity"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "type:../../../internal/types/user.go:AuthToken",
+      "type": "type",
+      "name": "AuthToken",
+      "filePath": "../../../internal/types/user.go",
+      "lineRange": [
+        144,
+        165
+      ],
+      "summary": "访问/刷新 Token 的持久化会话记录。",
+      "tags": [
+        "token",
+        "entity"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "type:../../../internal/types/user.go:LoginRequest",
+      "type": "type",
+      "name": "LoginRequest",
+      "filePath": "../../../internal/types/user.go",
+      "lineRange": [
+        167,
+        170
+      ],
+      "summary": "本地登录邮箱和密码输入。",
+      "tags": [
+        "dto",
+        "request"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "type:../../../internal/types/user.go:OIDCAuthURLResponse",
+      "type": "type",
+      "name": "OIDCAuthURLResponse",
+      "filePath": "../../../internal/types/user.go",
+      "lineRange": [
+        172,
+        189
+      ],
+      "summary": "OIDC 授权地址、state、Nonce 与 PKCE 返回结构。",
+      "tags": [
+        "dto",
+        "oidc"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "type:../../../internal/types/user.go:OIDCCallbackResponse",
+      "type": "type",
+      "name": "OIDCCallbackResponse",
+      "filePath": "../../../internal/types/user.go",
+      "lineRange": [
+        191,
+        210
+      ],
+      "summary": "OIDC 登录完成后的本地用户与 Token 响应。",
+      "tags": [
+        "dto",
+        "oidc"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "type:../../../internal/types/user.go:LoginResponse",
+      "type": "type",
+      "name": "LoginResponse",
+      "filePath": "../../../internal/types/user.go",
+      "lineRange": [
+        257,
+        281
+      ],
+      "summary": "本地登录返回的用户、空间、Membership 与 Token 契约。",
+      "tags": [
+        "dto",
+        "response"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "type:../../../internal/types/tenant_member.go:Membership",
+      "type": "type",
+      "name": "Membership",
+      "filePath": "../../../internal/types/tenant_member.go",
+      "lineRange": [
+        117,
+        124
+      ],
+      "summary": "用户可访问租户及角色的轻量投影。",
+      "tags": [
+        "dto",
+        "membership"
+      ],
+      "complexity": "simple"
+    },
+    {
+      "id": "file:../../../internal/router/router.go",
+      "type": "file",
+      "name": "router.go",
+      "filePath": "../../../internal/router/router.go",
+      "summary": "Gin 主路由装配入口：挂载全局 Auth middleware、/api/v1 路由组和认证子路由。",
+      "tags": [
+        "路由装配",
+        "认证中间件",
+        "api-v1"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:../../../internal/router/router.go:NewRouter",
+      "type": "function",
+      "name": "NewRouter",
+      "filePath": "../../../internal/router/router.go",
+      "lineRange": [
+        104,
+        270
+      ],
+      "summary": "创建 Gin Engine，按顺序安装全局认证中间件、API Key 授权器和业务路由。",
+      "tags": [
+        "gin",
+        "路由装配",
+        "middleware"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:../../../internal/handler/dto/auth.go",
+      "type": "file",
+      "name": "auth.go",
+      "filePath": "../../../internal/handler/dto/auth.go",
+      "summary": "认证响应 DTO 转换层：过滤敏感字段并规范化 Login/OIDC HTTP 响应。",
+      "tags": [
+        "dto",
+        "响应转换",
+        "认证"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:../../../internal/handler/dto/auth.go:NewAuthLoginResponse",
+      "type": "function",
+      "name": "NewAuthLoginResponse",
+      "filePath": "../../../internal/handler/dto/auth.go",
+      "lineRange": [
+        29,
+        46
+      ],
+      "summary": "将 Service LoginResponse 转成 HTTP 安全响应并投影活动空间角色。",
+      "tags": [
+        "dto",
+        "登录响应",
+        "transforms"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:../../../internal/handler/dto/auth.go:NewAuthOIDCCallbackResponse",
+      "type": "function",
+      "name": "NewAuthOIDCCallbackResponse",
+      "filePath": "../../../internal/handler/dto/auth.go",
+      "lineRange": [
+        49,
+        67
+      ],
+      "summary": "将 OIDC Service 结果转换为可编码进浏览器回调的安全 DTO。",
+      "tags": [
+        "dto",
+        "oidc",
+        "transforms"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:../../../internal/application/service/password_policy.go",
+      "type": "file",
+      "name": "password_policy.go",
+      "filePath": "../../../internal/application/service/password_policy.go",
+      "summary": "密码策略服务：融合系统设置、环境变量和默认配置并校验密码复杂度。",
+      "tags": [
+        "密码策略",
+        "校验",
+        "系统设置"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:../../../internal/application/service/password_policy.go:ResolveComplexPasswordEnabled",
+      "type": "function",
+      "name": "ResolveComplexPasswordEnabled",
+      "filePath": "../../../internal/application/service/password_policy.go",
+      "lineRange": [
+        27,
+        45
+      ],
+      "summary": "解析当前部署是否启用复杂密码策略。",
+      "tags": [
+        "配置解析",
+        "密码策略"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:../../../internal/application/service/password_policy.go:ValidatePasswordPolicy",
+      "type": "function",
+      "name": "ValidatePasswordPolicy",
+      "filePath": "../../../internal/application/service/password_policy.go",
+      "lineRange": [
+        59,
+        95
+      ],
+      "summary": "校验密码长度及大小写、数字、特殊字符规则。",
+      "tags": [
+        "密码策略",
+        "validates"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:../../../internal/application/service/user.go:GenerateTokens",
+      "type": "function",
+      "name": "GenerateTokens",
+      "filePath": "../../../internal/application/service/user.go",
+      "lineRange": [
+        969,
+        974
+      ],
+      "summary": "根据用户和活动空间策略生成新的 Access/Refresh Token 对。",
+      "tags": [
+        "token",
+        "jwt",
+        "会话"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:../../../internal/application/service/user.go:resolveLoginTenantID",
+      "type": "function",
+      "name": "resolveLoginTenantID",
+      "filePath": "../../../internal/application/service/user.go",
+      "lineRange": [
+        992,
+        1035
+      ],
+      "summary": "根据上次活动空间、成员关系和 home tenant 解析登录后的目标租户。",
+      "tags": [
+        "多租户",
+        "登录空间",
+        "membership"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:../../../internal/application/service/user.go:generateTokensForTenant",
+      "type": "function",
+      "name": "generateTokensForTenant",
+      "filePath": "../../../internal/application/service/user.go",
+      "lineRange": [
+        1157,
+        1225
+      ],
+      "summary": "把用户和租户信息编码进 JWT，并持久化 Access/Refresh 会话记录。",
+      "tags": [
+        "jwt",
+        "token持久化",
+        "auth-tokens"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:../../../internal/application/service/user.go:ValidateToken",
+      "type": "function",
+      "name": "ValidateToken",
+      "filePath": "../../../internal/application/service/user.go",
+      "lineRange": [
+        1337,
+        1398
+      ],
+      "summary": "验证 JWT 签名与类型，检查数据库撤销状态和用户激活状态并返回租户 claim。",
+      "tags": [
+        "jwt",
+        "token校验",
+        "会话"
+      ],
+      "complexity": "complex"
     }
   ],
   "edges": [
@@ -638,6 +1557,790 @@
       "type": "calls",
       "direction": "forward",
       "weight": 0.8
+    },
+    {
+      "source": "file:../../../internal/router/routes_auth_tenant.go",
+      "target": "function:../../../internal/router/routes_auth_tenant.go:RegisterAuthRoutes",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/middleware/auth.go",
+      "target": "function:../../../internal/middleware/auth.go:isNoAuthAPI",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/middleware/auth.go",
+      "target": "function:../../../internal/middleware/auth.go:Auth",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/middleware/auth.go",
+      "target": "function:../../../internal/middleware/auth.go:authenticateJWTUser",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/middleware/auth_context.go",
+      "target": "function:../../../internal/middleware/auth_context.go:applyAuthSession",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/handler/auth.go",
+      "target": "function:../../../internal/handler/auth.go:Login",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/handler/auth.go",
+      "target": "function:../../../internal/handler/auth.go:GetOIDCAuthorizationURL",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/handler/auth.go",
+      "target": "function:../../../internal/handler/auth.go:OIDCRedirectCallback",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/handler/auth.go",
+      "target": "function:../../../internal/handler/auth.go:RefreshToken",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/handler/auth.go",
+      "target": "function:../../../internal/handler/auth.go:GetCurrentUser",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/handler/auth.go",
+      "target": "function:../../../internal/handler/auth.go:ChangePassword",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/handler/auth.go",
+      "target": "function:../../../internal/handler/auth.go:AutoSetup",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/application/service/user.go",
+      "target": "function:../../../internal/application/service/user.go:Login",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/application/service/user.go",
+      "target": "function:../../../internal/application/service/user.go:BuildLoginMemberships",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/application/service/user.go",
+      "target": "function:../../../internal/application/service/user.go:GetOIDCAuthorizationURL",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/application/service/user.go",
+      "target": "function:../../../internal/application/service/user.go:LoginWithOIDC",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/application/service/user.go",
+      "target": "function:../../../internal/application/service/user.go:ChangePassword",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/application/service/user.go",
+      "target": "function:../../../internal/application/service/user.go:RefreshToken",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/application/service/user.go",
+      "target": "function:../../../internal/application/service/user.go:GetCurrentUser",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/application/repository/user.go",
+      "target": "function:../../../internal/application/repository/user.go:GetUserByID",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/application/repository/user.go",
+      "target": "function:../../../internal/application/repository/user.go:GetUserByEmail",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/application/repository/user.go",
+      "target": "function:../../../internal/application/repository/user.go:UpdateUser",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/application/repository/user.go",
+      "target": "function:../../../internal/application/repository/user.go:GetTokenByValue",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/application/repository/user.go",
+      "target": "function:../../../internal/application/repository/user.go:UpdateToken",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/application/repository/user.go",
+      "target": "function:../../../internal/application/repository/user.go:RevokeTokensByUserID",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/types/user.go",
+      "target": "type:../../../internal/types/user.go:User",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/types/user.go",
+      "target": "type:../../../internal/types/user.go:AuthToken",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/types/user.go",
+      "target": "type:../../../internal/types/user.go:LoginRequest",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/types/user.go",
+      "target": "type:../../../internal/types/user.go:OIDCAuthURLResponse",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/types/user.go",
+      "target": "type:../../../internal/types/user.go:OIDCCallbackResponse",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/types/user.go",
+      "target": "type:../../../internal/types/user.go:LoginResponse",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/types/tenant_member.go",
+      "target": "type:../../../internal/types/tenant_member.go:Membership",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "function:../../../internal/router/routes_auth_tenant.go:RegisterAuthRoutes",
+      "target": "endpoint:POST:/api/v1/auth/login",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "function:../../../internal/router/routes_auth_tenant.go:RegisterAuthRoutes",
+      "target": "endpoint:GET:/api/v1/auth/oidc/url",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "function:../../../internal/router/routes_auth_tenant.go:RegisterAuthRoutes",
+      "target": "endpoint:GET:/api/v1/auth/oidc/callback",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "function:../../../internal/router/routes_auth_tenant.go:RegisterAuthRoutes",
+      "target": "endpoint:POST:/api/v1/auth/auto-setup",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "function:../../../internal/router/routes_auth_tenant.go:RegisterAuthRoutes",
+      "target": "endpoint:POST:/api/v1/auth/refresh",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "function:../../../internal/router/routes_auth_tenant.go:RegisterAuthRoutes",
+      "target": "endpoint:GET:/api/v1/auth/me",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "function:../../../internal/router/routes_auth_tenant.go:RegisterAuthRoutes",
+      "target": "endpoint:POST:/api/v1/auth/change-password",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "endpoint:POST:/api/v1/auth/login",
+      "target": "function:../../../internal/handler/auth.go:Login",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "endpoint:POST:/api/v1/auth/login",
+      "target": "function:../../../internal/middleware/auth.go:Auth",
+      "type": "middleware",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "endpoint:GET:/api/v1/auth/oidc/url",
+      "target": "function:../../../internal/handler/auth.go:GetOIDCAuthorizationURL",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "endpoint:GET:/api/v1/auth/oidc/url",
+      "target": "function:../../../internal/middleware/auth.go:Auth",
+      "type": "middleware",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "endpoint:GET:/api/v1/auth/oidc/callback",
+      "target": "function:../../../internal/handler/auth.go:OIDCRedirectCallback",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "endpoint:GET:/api/v1/auth/oidc/callback",
+      "target": "function:../../../internal/middleware/auth.go:Auth",
+      "type": "middleware",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "endpoint:POST:/api/v1/auth/auto-setup",
+      "target": "function:../../../internal/handler/auth.go:AutoSetup",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "endpoint:POST:/api/v1/auth/auto-setup",
+      "target": "function:../../../internal/middleware/auth.go:Auth",
+      "type": "middleware",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "endpoint:POST:/api/v1/auth/refresh",
+      "target": "function:../../../internal/handler/auth.go:RefreshToken",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "endpoint:POST:/api/v1/auth/refresh",
+      "target": "function:../../../internal/middleware/auth.go:Auth",
+      "type": "middleware",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "endpoint:GET:/api/v1/auth/me",
+      "target": "function:../../../internal/handler/auth.go:GetCurrentUser",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "endpoint:GET:/api/v1/auth/me",
+      "target": "function:../../../internal/middleware/auth.go:Auth",
+      "type": "middleware",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "endpoint:POST:/api/v1/auth/change-password",
+      "target": "function:../../../internal/handler/auth.go:ChangePassword",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "endpoint:POST:/api/v1/auth/change-password",
+      "target": "function:../../../internal/middleware/auth.go:Auth",
+      "type": "middleware",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "function:../../../internal/middleware/auth.go:Auth",
+      "target": "function:../../../internal/middleware/auth.go:isNoAuthAPI",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:../../../internal/middleware/auth.go:Auth",
+      "target": "function:../../../internal/middleware/auth.go:authenticateJWTUser",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:../../../internal/middleware/auth.go:authenticateJWTUser",
+      "target": "function:../../../internal/middleware/auth_context.go:applyAuthSession",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:../../../internal/handler/auth.go:Login",
+      "target": "function:../../../internal/application/service/user.go:Login",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:../../../internal/handler/auth.go:GetOIDCAuthorizationURL",
+      "target": "function:../../../internal/application/service/user.go:GetOIDCAuthorizationURL",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:../../../internal/handler/auth.go:OIDCRedirectCallback",
+      "target": "function:../../../internal/application/service/user.go:LoginWithOIDC",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:../../../internal/handler/auth.go:RefreshToken",
+      "target": "function:../../../internal/application/service/user.go:RefreshToken",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:../../../internal/handler/auth.go:GetCurrentUser",
+      "target": "function:../../../internal/application/service/user.go:GetCurrentUser",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:../../../internal/handler/auth.go:ChangePassword",
+      "target": "function:../../../internal/application/service/user.go:ChangePassword",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:../../../internal/handler/auth.go:GetCurrentUser",
+      "target": "function:../../../internal/application/service/user.go:BuildLoginMemberships",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:../../../internal/handler/auth.go:AutoSetup",
+      "target": "function:../../../internal/application/service/user.go:Login",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:../../../internal/application/service/user.go:Login",
+      "target": "function:../../../internal/application/repository/user.go:GetUserByEmail",
+      "type": "reads_from",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:../../../internal/application/service/user.go:Login",
+      "target": "function:../../../internal/application/service/user.go:BuildLoginMemberships",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:../../../internal/application/service/user.go:LoginWithOIDC",
+      "target": "function:../../../internal/application/repository/user.go:GetUserByEmail",
+      "type": "reads_from",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:../../../internal/application/service/user.go:LoginWithOIDC",
+      "target": "function:../../../internal/application/service/user.go:BuildLoginMemberships",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:../../../internal/application/service/user.go:ChangePassword",
+      "target": "function:../../../internal/application/repository/user.go:GetUserByID",
+      "type": "reads_from",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:../../../internal/application/service/user.go:ChangePassword",
+      "target": "function:../../../internal/application/repository/user.go:UpdateUser",
+      "type": "writes_to",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:../../../internal/application/service/user.go:ChangePassword",
+      "target": "function:../../../internal/application/repository/user.go:RevokeTokensByUserID",
+      "type": "writes_to",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:../../../internal/application/service/user.go:RefreshToken",
+      "target": "function:../../../internal/application/repository/user.go:GetTokenByValue",
+      "type": "reads_from",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:../../../internal/application/service/user.go:RefreshToken",
+      "target": "function:../../../internal/application/repository/user.go:GetUserByID",
+      "type": "reads_from",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:../../../internal/application/service/user.go:RefreshToken",
+      "target": "function:../../../internal/application/repository/user.go:UpdateToken",
+      "type": "writes_to",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:../../../internal/application/service/user.go:GetCurrentUser",
+      "target": "function:../../../internal/middleware/auth_context.go:applyAuthSession",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "function:../../../internal/application/service/user.go:Login",
+      "target": "type:../../../internal/types/user.go:LoginRequest",
+      "type": "validates",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "function:../../../internal/application/service/user.go:Login",
+      "target": "type:../../../internal/types/user.go:LoginResponse",
+      "type": "transforms",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "function:../../../internal/application/service/user.go:BuildLoginMemberships",
+      "target": "type:../../../internal/types/tenant_member.go:Membership",
+      "type": "transforms",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "function:../../../internal/application/service/user.go:GetOIDCAuthorizationURL",
+      "target": "type:../../../internal/types/user.go:OIDCAuthURLResponse",
+      "type": "transforms",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "function:../../../internal/application/service/user.go:LoginWithOIDC",
+      "target": "type:../../../internal/types/user.go:OIDCCallbackResponse",
+      "type": "transforms",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "function:api/auth/index.ts:login",
+      "target": "endpoint:POST:/api/v1/auth/login",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:api/auth/index.ts:getOIDCAuthorizationURL",
+      "target": "endpoint:GET:/api/v1/auth/oidc/url",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:api/auth/index.ts:autoSetup",
+      "target": "endpoint:POST:/api/v1/auth/auto-setup",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:api/auth/index.ts:getCurrentUser",
+      "target": "endpoint:GET:/api/v1/auth/me",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:api/auth/index.ts:refreshToken",
+      "target": "endpoint:POST:/api/v1/auth/refresh",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:api/auth/index.ts:changePassword",
+      "target": "endpoint:POST:/api/v1/auth/change-password",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:App.vue:handleGlobalOIDCCallback",
+      "target": "endpoint:GET:/api/v1/auth/oidc/callback",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "type:../../../internal/types/user.go:LoginResponse",
+      "target": "function:api/auth/index.ts:userInfoFromApi",
+      "type": "transforms",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "type:../../../internal/types/tenant_member.go:Membership",
+      "target": "function:stores/auth.ts:useAuthStore",
+      "type": "writes_to",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "function:../../../internal/handler/auth.go:GetCurrentUser",
+      "target": "function:stores/auth.ts:useAuthStore",
+      "type": "writes_to",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:../../../internal/router/router.go",
+      "target": "function:../../../internal/router/router.go:NewRouter",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "function:../../../internal/router/router.go:NewRouter",
+      "target": "function:../../../internal/middleware/auth.go:Auth",
+      "type": "middleware",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "function:../../../internal/router/router.go:NewRouter",
+      "target": "function:../../../internal/router/routes_auth_tenant.go:RegisterAuthRoutes",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:../../../internal/handler/dto/auth.go",
+      "target": "function:../../../internal/handler/dto/auth.go:NewAuthLoginResponse",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/handler/dto/auth.go",
+      "target": "function:../../../internal/handler/dto/auth.go:NewAuthOIDCCallbackResponse",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "function:../../../internal/handler/auth.go:Login",
+      "target": "function:../../../internal/handler/dto/auth.go:NewAuthLoginResponse",
+      "type": "transforms",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "function:../../../internal/handler/auth.go:OIDCRedirectCallback",
+      "target": "function:../../../internal/handler/dto/auth.go:NewAuthOIDCCallbackResponse",
+      "type": "transforms",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:../../../internal/application/service/password_policy.go",
+      "target": "function:../../../internal/application/service/password_policy.go:ResolveComplexPasswordEnabled",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/application/service/password_policy.go",
+      "target": "function:../../../internal/application/service/password_policy.go:ValidatePasswordPolicy",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "function:../../../internal/application/service/user.go:ChangePassword",
+      "target": "function:../../../internal/application/service/password_policy.go:ResolveComplexPasswordEnabled",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:../../../internal/application/service/user.go:ChangePassword",
+      "target": "function:../../../internal/application/service/password_policy.go:ValidatePasswordPolicy",
+      "type": "validates",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:../../../internal/application/service/user.go",
+      "target": "function:../../../internal/application/service/user.go:GenerateTokens",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/application/service/user.go",
+      "target": "function:../../../internal/application/service/user.go:resolveLoginTenantID",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/application/service/user.go",
+      "target": "function:../../../internal/application/service/user.go:generateTokensForTenant",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:../../../internal/application/service/user.go",
+      "target": "function:../../../internal/application/service/user.go:ValidateToken",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "function:../../../internal/application/service/user.go:Login",
+      "target": "function:../../../internal/application/service/user.go:resolveLoginTenantID",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:../../../internal/application/service/user.go:Login",
+      "target": "function:../../../internal/application/service/user.go:generateTokensForTenant",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:../../../internal/application/service/user.go:LoginWithOIDC",
+      "target": "function:../../../internal/application/service/user.go:resolveLoginTenantID",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:../../../internal/application/service/user.go:LoginWithOIDC",
+      "target": "function:../../../internal/application/service/user.go:generateTokensForTenant",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:../../../internal/application/service/user.go:RefreshToken",
+      "target": "function:../../../internal/application/service/user.go:GenerateTokens",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:../../../internal/middleware/auth.go:Auth",
+      "target": "function:../../../internal/application/service/user.go:ValidateToken",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:../../../internal/application/service/user.go:generateTokensForTenant",
+      "target": "function:../../../internal/application/repository/user.go:UpdateToken",
+      "type": "writes_to",
+      "direction": "forward",
+      "weight": 0.5
     }
   ],
   "layers": [
@@ -647,8 +2350,8 @@
       "description": "负责 Vue 启动、根级副作用、页面路由和访问门禁，是认证流程进入界面的编排入口。",
       "nodeIds": [
         "file:main.ts",
-        "file:App.vue",
-        "file:router/index.ts"
+        "file:router/index.ts",
+        "file:App.vue"
       ]
     },
     {
@@ -666,6 +2369,59 @@
       "description": "封装认证、OIDC、会话校准、Token 生命周期与邀请注册的后端通信。",
       "nodeIds": [
         "file:api/auth/index.ts"
+      ]
+    },
+    {
+      "id": "layer:http-contract",
+      "name": "跨端 HTTP 契约层",
+      "description": "连接前端 API Client 与 Go 认证端点，明确公开路由和受保护路由。",
+      "nodeIds": [
+        "endpoint:POST:/api/v1/auth/login",
+        "endpoint:GET:/api/v1/auth/oidc/url",
+        "endpoint:GET:/api/v1/auth/oidc/callback",
+        "endpoint:POST:/api/v1/auth/auto-setup",
+        "endpoint:POST:/api/v1/auth/refresh",
+        "endpoint:GET:/api/v1/auth/me",
+        "endpoint:POST:/api/v1/auth/change-password"
+      ]
+    },
+    {
+      "id": "layer:backend-routing",
+      "name": "后端路由与认证中间件层",
+      "description": "注册认证路由、校验 JWT/API Key，并解析活动租户和角色。",
+      "nodeIds": [
+        "file:../../../internal/router/router.go",
+        "file:../../../internal/router/routes_auth_tenant.go",
+        "file:../../../internal/middleware/auth.go",
+        "file:../../../internal/middleware/auth_context.go"
+      ]
+    },
+    {
+      "id": "layer:backend-handler",
+      "name": "后端认证 Handler 层",
+      "description": "处理 HTTP 输入输出、Cookie、重定向与错误映射。",
+      "nodeIds": [
+        "file:../../../internal/handler/auth.go",
+        "file:../../../internal/handler/dto/auth.go"
+      ]
+    },
+    {
+      "id": "layer:backend-service",
+      "name": "后端认证 Service 层",
+      "description": "实现密码认证、OIDC、Token 生命周期、Membership 与会话业务规则。",
+      "nodeIds": [
+        "file:../../../internal/application/service/user.go",
+        "file:../../../internal/application/service/password_policy.go"
+      ]
+    },
+    {
+      "id": "layer:backend-data",
+      "name": "后端数据与领域模型层",
+      "description": "通过 Repository 持久化用户和 Token，并定义前后端共享的认证数据契约。",
+      "nodeIds": [
+        "file:../../../internal/application/repository/user.go",
+        "file:../../../internal/types/user.go",
+        "file:../../../internal/types/tenant_member.go"
       ]
     }
   ],
@@ -719,6 +2475,63 @@
         "function:api/auth/index.ts:userInfoFromApi",
         "function:api/auth/index.ts:getCurrentUser",
         "function:api/auth/index.ts:refreshToken"
+      ]
+    },
+    {
+      "order": 6,
+      "title": "HTTP 如何跨越前后端",
+      "description": "从前端 api/auth 函数沿 calls 边进入 /api/v1/auth/* endpoint，再由 Gin 路由映射到 AuthHandler。",
+      "nodeIds": [
+        "function:api/auth/index.ts:login",
+        "endpoint:POST:/api/v1/auth/login",
+        "function:../../../internal/router/routes_auth_tenant.go:RegisterAuthRoutes",
+        "function:../../../internal/handler/auth.go:Login"
+      ]
+    },
+    {
+      "order": 7,
+      "title": "JWT 如何变成请求身份",
+      "description": "Auth 中间件验证 Bearer Token，解析活动租户和角色，再由 applyAuthSession 同步写入 Gin 与 Go Context。",
+      "nodeIds": [
+        "function:../../../internal/middleware/auth.go:Auth",
+        "function:../../../internal/middleware/auth.go:authenticateJWTUser",
+        "function:../../../internal/middleware/auth_context.go:applyAuthSession"
+      ]
+    },
+    {
+      "order": 8,
+      "title": "登录与 Token 生命周期",
+      "description": "UserService 从 Repository 读取用户，校验密码或 OIDC 身份，签发/轮换 Token，并将 LoginResponse 映射回前端 Store。",
+      "nodeIds": [
+        "function:../../../internal/application/service/user.go:Login",
+        "function:../../../internal/application/service/user.go:LoginWithOIDC",
+        "function:../../../internal/application/service/user.go:RefreshToken",
+        "file:../../../internal/application/repository/user.go",
+        "type:../../../internal/types/user.go:LoginResponse"
+      ]
+    },
+    {
+      "order": 9,
+      "title": "auth/me 如何恢复前端会话",
+      "description": "受保护的 /auth/me 复用中间件上下文，聚合活动租户、Membership 和 capabilities，最终刷新 Pinia Auth Store。",
+      "nodeIds": [
+        "endpoint:GET:/api/v1/auth/me",
+        "function:../../../internal/handler/auth.go:GetCurrentUser",
+        "function:../../../internal/application/service/user.go:GetCurrentUser",
+        "function:../../../internal/application/service/user.go:BuildLoginMemberships",
+        "function:stores/auth.ts:useAuthStore"
+      ]
+    },
+    {
+      "order": 10,
+      "title": "公开与受保护端点如何共用路由栈",
+      "description": "NewRouter 先安装全局 Auth middleware，再注册认证路由；公开端点由 noAuthAPI 放行，而 /auth/me 与改密继续执行 ValidateToken 和上下文注入。",
+      "nodeIds": [
+        "function:../../../internal/router/router.go:NewRouter",
+        "function:../../../internal/middleware/auth.go:Auth",
+        "function:../../../internal/middleware/auth.go:isNoAuthAPI",
+        "function:../../../internal/application/service/user.go:ValidateToken",
+        "function:../../../internal/middleware/auth_context.go:applyAuthSession"
       ]
     }
   ]
