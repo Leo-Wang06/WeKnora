@@ -1,0 +1,725 @@
+{
+  "version": "1.0.0",
+  "project": {
+    "name": "WeKnora Frontend Auth Core",
+    "languages": [
+      "Vue",
+      "TypeScript"
+    ],
+    "frameworks": [
+      "Vue 3",
+      "Pinia",
+      "Vue Router",
+      "TDesign"
+    ],
+    "description": "WeKnora 前端启动与认证链路的小范围中文知识图谱。",
+    "analyzedAt": "2026-11-07T07:28:41.900Z",
+    "gitCommitHash": "de8febd3f400c52aa73fbbd5235ce281f5388ec7"
+  },
+  "nodes": [
+    {
+      "id": "file:main.ts",
+      "type": "file",
+      "name": "main.ts",
+      "filePath": "main.ts",
+      "summary": "Vue 3 主入口：安装 TDesign、Pinia、Router 与 i18n，并在挂载前用 /auth/me 校准已有会话。",
+      "tags": [
+        "应用入口",
+        "vue",
+        "启动编排"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:App.vue",
+      "type": "file",
+      "name": "App.vue",
+      "filePath": "App.vue",
+      "summary": "根组件与全局运行时协调层：处理 OIDC 回调、租户切换通知、邀请轮询、自动更新检查和全局宿主组件。",
+      "tags": [
+        "根组件",
+        "oidc",
+        "全局副作用"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:router/index.ts",
+      "type": "file",
+      "name": "index.ts",
+      "filePath": "router/index.ts",
+      "summary": "集中定义 SPA 路由与异步导航守卫，统一处理会话恢复、租户 onboarding、Lite 自动登录、功能能力和系统管理员门禁。",
+      "tags": [
+        "路由守卫",
+        "认证门禁",
+        "懒加载"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:stores/auth.ts",
+      "type": "file",
+      "name": "auth.ts",
+      "filePath": "stores/auth.ts",
+      "summary": "Pinia 认证状态源：管理用户、Token、租户、成员角色、会话恢复、邀请加入及登出缓存清理。",
+      "tags": [
+        "pinia",
+        "认证状态",
+        "多租户"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:stores/settings.ts",
+      "type": "file",
+      "name": "settings.ts",
+      "filePath": "stores/settings.ts",
+      "summary": "Pinia 设置状态源：持久化模型、Agent、知识库、文件、标签、MCP、Skill 与会话输入偏好。",
+      "tags": [
+        "pinia",
+        "用户设置",
+        "本地持久化"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:api/auth/index.ts",
+      "type": "file",
+      "name": "index.ts",
+      "filePath": "api/auth/index.ts",
+      "summary": "认证 API 适配层：封装登录、OIDC、自动初始化、/auth/me、Token 刷新、密码与邀请注册接口，并规范化用户模型。",
+      "tags": [
+        "api",
+        "认证接口",
+        "oidc"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:main.ts:bootstrap",
+      "type": "function",
+      "name": "bootstrap",
+      "filePath": "main.ts",
+      "lineRange": [
+        30,
+        60
+      ],
+      "summary": "创建并配置 Vue 应用，在首屏渲染前协调认证校准与路由就绪。",
+      "tags": [
+        "启动函数",
+        "异步初始化",
+        "vue"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:App.vue:syncOIDCUserContext",
+      "type": "function",
+      "name": "syncOIDCUserContext",
+      "filePath": "App.vue",
+      "lineRange": [
+        54,
+        99
+      ],
+      "summary": "通过 /auth/me 将用户、租户、成员关系和能力同步到认证 Store，并校正活动租户覆盖。",
+      "tags": [
+        "oidc",
+        "会话同步",
+        "多租户"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:App.vue:persistOIDCLoginResponse",
+      "type": "function",
+      "name": "persistOIDCLoginResponse",
+      "filePath": "App.vue",
+      "lineRange": [
+        101,
+        128
+      ],
+      "summary": "持久化 OIDC Token，兑换待处理邀请，并根据租户状态选择应用落点。",
+      "tags": [
+        "oidc",
+        "登录落盘",
+        "邀请流程"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:App.vue:handleGlobalOIDCCallback",
+      "type": "function",
+      "name": "handleGlobalOIDCCallback",
+      "filePath": "App.vue",
+      "lineRange": [
+        130,
+        174
+      ],
+      "summary": "解析 URL hash 中的 OIDC 成功或错误结果，清理回调状态并驱动后续登录流程。",
+      "tags": [
+        "oidc",
+        "回调处理",
+        "错误恢复"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:router/index.ts:persistLoginResponse",
+      "type": "function",
+      "name": "persistLoginResponse",
+      "filePath": "router/index.ts",
+      "lineRange": [
+        239,
+        263
+      ],
+      "summary": "将 Lite auto-setup 登录响应写入认证 Store，包含用户、Token、租户和成员关系。",
+      "tags": [
+        "路由守卫",
+        "登录落盘",
+        "lite"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:router/index.ts:hydrateSessionFromToken",
+      "type": "function",
+      "name": "hydrateSessionFromToken",
+      "filePath": "router/index.ts",
+      "lineRange": [
+        265,
+        281
+      ],
+      "summary": "从 localStorage 恢复 Token，并复用认证 Store 的 /auth/me 刷新机制校准会话。",
+      "tags": [
+        "会话恢复",
+        "token",
+        "路由守卫"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:stores/auth.ts:useAuthStore",
+      "type": "function",
+      "name": "useAuthStore",
+      "filePath": "stores/auth.ts",
+      "lineRange": [
+        32,
+        623
+      ],
+      "summary": "定义认证单一事实源及其计算属性、持久化动作、并发刷新控制和租户切换清理策略。",
+      "tags": [
+        "pinia-store",
+        "认证状态",
+        "单一事实源"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:stores/settings.ts:useSettingsStore",
+      "type": "function",
+      "name": "useSettingsStore",
+      "filePath": "stores/settings.ts",
+      "lineRange": [
+        114,
+        641
+      ],
+      "summary": "定义用户设置状态及大量持久化动作，为聊天输入、模型选择和工具开关提供共享配置。",
+      "tags": [
+        "pinia-store",
+        "设置状态",
+        "本地持久化"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:api/auth/index.ts:userInfoFromApi",
+      "type": "function",
+      "name": "userInfoFromApi",
+      "filePath": "api/auth/index.ts",
+      "lineRange": [
+        145,
+        166
+      ],
+      "summary": "将后端用户结构规范化为前端 UserInfo，并补齐租户与时间字段。",
+      "tags": [
+        "数据适配",
+        "用户模型",
+        "序列化"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:api/auth/index.ts:login",
+      "type": "function",
+      "name": "login",
+      "filePath": "api/auth/index.ts",
+      "lineRange": [
+        217,
+        227
+      ],
+      "summary": "调用登录接口并返回统一的 LoginResponse。",
+      "tags": [
+        "api调用",
+        "登录",
+        "认证"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:api/auth/index.ts:getOIDCAuthorizationURL",
+      "type": "function",
+      "name": "getOIDCAuthorizationURL",
+      "filePath": "api/auth/index.ts",
+      "lineRange": [
+        232,
+        242
+      ],
+      "summary": "请求 OIDC 授权地址，并安全编码回调 URI。",
+      "tags": [
+        "oidc",
+        "api调用",
+        "授权跳转"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:api/auth/index.ts:autoSetup",
+      "type": "function",
+      "name": "autoSetup",
+      "filePath": "api/auth/index.ts",
+      "lineRange": [
+        305,
+        331
+      ],
+      "summary": "在桌面 Lite 容器中获取原生一次性令牌并执行自动初始化登录。",
+      "tags": [
+        "lite",
+        "自动登录",
+        "原生桥接"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:api/auth/index.ts:getCurrentUser",
+      "type": "function",
+      "name": "getCurrentUser",
+      "filePath": "api/auth/index.ts",
+      "lineRange": [
+        354,
+        364
+      ],
+      "summary": "请求 /auth/me，返回当前用户、租户、成员关系与部署能力。",
+      "tags": [
+        "api调用",
+        "会话校准",
+        "认证"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:api/auth/index.ts:refreshToken",
+      "type": "function",
+      "name": "refreshToken",
+      "filePath": "api/auth/index.ts",
+      "lineRange": [
+        402,
+        428
+      ],
+      "summary": "用刷新令牌换取新访问令牌，并区分认证失败与通用错误。",
+      "tags": [
+        "token刷新",
+        "api调用",
+        "错误处理"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:api/auth/index.ts:changePassword",
+      "type": "function",
+      "name": "changePassword",
+      "filePath": "api/auth/index.ts",
+      "lineRange": [
+        477,
+        489
+      ],
+      "summary": "提交密码修改请求，并将后端错误映射为可读提示。",
+      "tags": [
+        "密码管理",
+        "api调用",
+        "错误映射"
+      ],
+      "complexity": "moderate"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:main.ts",
+      "target": "function:main.ts:bootstrap",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:App.vue",
+      "target": "function:App.vue:syncOIDCUserContext",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:App.vue",
+      "target": "function:App.vue:persistOIDCLoginResponse",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:App.vue",
+      "target": "function:App.vue:handleGlobalOIDCCallback",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:router/index.ts",
+      "target": "function:router/index.ts:persistLoginResponse",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:router/index.ts",
+      "target": "function:router/index.ts:hydrateSessionFromToken",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:stores/auth.ts",
+      "target": "function:stores/auth.ts:useAuthStore",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:stores/settings.ts",
+      "target": "function:stores/settings.ts:useSettingsStore",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:api/auth/index.ts",
+      "target": "function:api/auth/index.ts:userInfoFromApi",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:api/auth/index.ts",
+      "target": "function:api/auth/index.ts:login",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:api/auth/index.ts",
+      "target": "function:api/auth/index.ts:getOIDCAuthorizationURL",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:api/auth/index.ts",
+      "target": "function:api/auth/index.ts:autoSetup",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:api/auth/index.ts",
+      "target": "function:api/auth/index.ts:getCurrentUser",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:api/auth/index.ts",
+      "target": "function:api/auth/index.ts:refreshToken",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:api/auth/index.ts",
+      "target": "function:api/auth/index.ts:changePassword",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:stores/auth.ts",
+      "target": "function:stores/auth.ts:useAuthStore",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:stores/settings.ts",
+      "target": "function:stores/settings.ts:useSettingsStore",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:api/auth/index.ts",
+      "target": "function:api/auth/index.ts:userInfoFromApi",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:api/auth/index.ts",
+      "target": "function:api/auth/index.ts:login",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:api/auth/index.ts",
+      "target": "function:api/auth/index.ts:getOIDCAuthorizationURL",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:api/auth/index.ts",
+      "target": "function:api/auth/index.ts:autoSetup",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:api/auth/index.ts",
+      "target": "function:api/auth/index.ts:getCurrentUser",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:api/auth/index.ts",
+      "target": "function:api/auth/index.ts:refreshToken",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:api/auth/index.ts",
+      "target": "function:api/auth/index.ts:changePassword",
+      "type": "exports",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:main.ts",
+      "target": "file:App.vue",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:main.ts",
+      "target": "file:router/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:main.ts",
+      "target": "file:stores/auth.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:App.vue",
+      "target": "file:stores/auth.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:App.vue",
+      "target": "file:stores/settings.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:App.vue",
+      "target": "file:api/auth/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:router/index.ts",
+      "target": "file:stores/auth.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:router/index.ts",
+      "target": "file:api/auth/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:stores/auth.ts",
+      "target": "file:api/auth/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:main.ts:bootstrap",
+      "target": "function:stores/auth.ts:useAuthStore",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:App.vue:syncOIDCUserContext",
+      "target": "function:api/auth/index.ts:getCurrentUser",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:App.vue:syncOIDCUserContext",
+      "target": "function:api/auth/index.ts:userInfoFromApi",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:App.vue:persistOIDCLoginResponse",
+      "target": "function:App.vue:syncOIDCUserContext",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:App.vue:handleGlobalOIDCCallback",
+      "target": "function:App.vue:persistOIDCLoginResponse",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:router/index.ts:persistLoginResponse",
+      "target": "function:api/auth/index.ts:userInfoFromApi",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:router/index.ts:hydrateSessionFromToken",
+      "target": "function:stores/auth.ts:useAuthStore",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:stores/auth.ts:useAuthStore",
+      "target": "function:api/auth/index.ts:getCurrentUser",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    }
+  ],
+  "layers": [
+    {
+      "id": "layer:application-shell",
+      "name": "应用壳与导航层",
+      "description": "负责 Vue 启动、根级副作用、页面路由和访问门禁，是认证流程进入界面的编排入口。",
+      "nodeIds": [
+        "file:main.ts",
+        "file:App.vue",
+        "file:router/index.ts"
+      ]
+    },
+    {
+      "id": "layer:state",
+      "name": "状态管理层",
+      "description": "用 Pinia 集中维护认证与用户设置，并将部分状态持久化到浏览器存储。",
+      "nodeIds": [
+        "file:stores/auth.ts",
+        "file:stores/settings.ts"
+      ]
+    },
+    {
+      "id": "layer:api",
+      "name": "认证 API 层",
+      "description": "封装认证、OIDC、会话校准、Token 生命周期与邀请注册的后端通信。",
+      "nodeIds": [
+        "file:api/auth/index.ts"
+      ]
+    }
+  ],
+  "tour": [
+    {
+      "order": 1,
+      "title": "应用如何启动",
+      "description": "从 main.ts 开始理解 Vue 应用的组装顺序。它先安装 UI、Pinia、Router 和 i18n，再校准已有会话并等待路由就绪，从而减少首屏闪跳。",
+      "nodeIds": [
+        "file:main.ts",
+        "function:main.ts:bootstrap"
+      ],
+      "languageLesson": "Vue 3 入口常用异步 bootstrap，把挂载前依赖按明确顺序串联。"
+    },
+    {
+      "order": 2,
+      "title": "根级运行时协调",
+      "description": "App.vue 不只是布局容器，还承担 OIDC 回调、邀请轮询和桌面更新检查。它说明项目将跨页面的副作用集中放在根组件生命周期中。",
+      "nodeIds": [
+        "file:App.vue",
+        "function:App.vue:handleGlobalOIDCCallback",
+        "function:App.vue:syncOIDCUserContext"
+      ]
+    },
+    {
+      "order": 3,
+      "title": "导航与访问门禁",
+      "description": "路由层把登录、租户 onboarding、Lite 自动登录和能力门禁串成统一流程。阅读守卫可以看到 Token 恢复失败后如何依次尝试 /auth/me、auto-setup，最后回到登录页。",
+      "nodeIds": [
+        "file:router/index.ts",
+        "function:router/index.ts:hydrateSessionFromToken",
+        "function:router/index.ts:persistLoginResponse"
+      ]
+    },
+    {
+      "order": 4,
+      "title": "认证单一事实源",
+      "description": "Auth Store 是用户、Token、活动租户和角色的共享状态中心。它特别处理并发 /auth/me 请求、登出后的迟到响应以及租户切换时的跨租户缓存污染。",
+      "nodeIds": [
+        "file:stores/auth.ts",
+        "function:stores/auth.ts:useAuthStore"
+      ],
+      "languageLesson": "Pinia setup store 用 ref 保存源状态、computed 派生权限视图，并通过 actions 约束持久化写入。"
+    },
+    {
+      "order": 5,
+      "title": "后端认证契约",
+      "description": "认证 API 层把登录、OIDC、Token 刷新和用户模型规范化封装为稳定函数。上层组件和 Store 依赖这些函数，而不直接处理 HTTP 细节。",
+      "nodeIds": [
+        "file:api/auth/index.ts",
+        "function:api/auth/index.ts:userInfoFromApi",
+        "function:api/auth/index.ts:getCurrentUser",
+        "function:api/auth/index.ts:refreshToken"
+      ]
+    }
+  ]
+}

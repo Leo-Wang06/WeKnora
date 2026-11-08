@@ -1,0 +1,619 @@
+{
+  "version": "1.0.0",
+  "gitCommitHash": "de8febd3f400c52aa73fbbd5235ce281f5388ec7",
+  "generatedAt": "2026-11-07T07:28:50.589Z",
+  "files": {
+    "App.vue": {
+      "filePath": "App.vue",
+      "contentHash": "333292c2ca260f46ffb0889737aeecb2a82538653578143f0e3308ef545c0d82",
+      "functions": [],
+      "classes": [],
+      "imports": [],
+      "exports": [],
+      "totalLines": 316,
+      "hasStructuralAnalysis": false
+    },
+    "api/auth/index.ts": {
+      "filePath": "api/auth/index.ts",
+      "contentHash": "4ad1c444798c5b03aeaf8643339de7a5a4df9ce7d23223d2318380cfcdb559c9",
+      "functions": [
+        {
+          "name": "t",
+          "params": [
+            "key"
+          ],
+          "exported": false,
+          "lineCount": 1
+        },
+        {
+          "name": "userInfoFromApi",
+          "params": [
+            "u",
+            "fallbackTenantId"
+          ],
+          "returnType": "UserInfo",
+          "exported": true,
+          "lineCount": 22
+        },
+        {
+          "name": "login",
+          "params": [
+            "data"
+          ],
+          "returnType": "Promise<LoginResponse>",
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "getOIDCAuthorizationURL",
+          "params": [
+            "redirectURI"
+          ],
+          "returnType": "Promise<OIDCAuthURLResponse>",
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "getOIDCConfig",
+          "params": [],
+          "returnType": "Promise<OIDCConfigResponse>",
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "getAuthConfig",
+          "params": [],
+          "returnType": "Promise<AuthConfigResponse>",
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "register",
+          "params": [
+            "data"
+          ],
+          "returnType": "Promise<RegisterResponse>",
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "autoSetup",
+          "params": [],
+          "returnType": "Promise<LoginResponse>",
+          "exported": true,
+          "lineCount": 27
+        },
+        {
+          "name": "getCurrentUser",
+          "params": [],
+          "returnType": "Promise<{ success: boolean; data?: { user: UserInfo; tenant?: TenantInfo | null; memberships?: MembershipInfo[]; tenant_required?: boolean; capabilities?: AuthCapabilities; preference_defaults?: { browser_search_instructions: string } }; message?: string }>",
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "updateMyPreferences",
+          "params": [
+            "patch"
+          ],
+          "returnType": "Promise<{ success: boolean; data?: UserPreferences; message?: string }>",
+          "exported": true,
+          "lineCount": 13
+        },
+        {
+          "name": "getCurrentTenant",
+          "params": [],
+          "returnType": "Promise<{ success: boolean; data?: TenantInfo; message?: string }>",
+          "exported": true,
+          "lineCount": 11
+        },
+        {
+          "name": "refreshToken",
+          "params": [
+            "refreshToken"
+          ],
+          "returnType": "Promise<{ success: boolean; data?: { token: string; refreshToken: string }; message?: string }>",
+          "exported": true,
+          "lineCount": 27
+        },
+        {
+          "name": "logout",
+          "params": [],
+          "returnType": "Promise<{ success: boolean; message?: string }>",
+          "exported": true,
+          "lineCount": 13
+        },
+        {
+          "name": "resolveChangePasswordError",
+          "params": [
+            "error"
+          ],
+          "returnType": "string",
+          "exported": true,
+          "lineCount": 18
+        },
+        {
+          "name": "changePassword",
+          "params": [
+            "data"
+          ],
+          "returnType": "Promise<{ success: boolean; message?: string }>",
+          "exported": true,
+          "lineCount": 13
+        },
+        {
+          "name": "validateToken",
+          "params": [],
+          "returnType": "Promise<{ success: boolean; valid?: boolean; message?: string }>",
+          "exported": true,
+          "lineCount": 12
+        },
+        {
+          "name": "getInvitationByToken",
+          "params": [
+            "token"
+          ],
+          "returnType": "Promise<InviteLookupResponse>",
+          "exported": true,
+          "lineCount": 8
+        },
+        {
+          "name": "registerByInvite",
+          "params": [
+            "data"
+          ],
+          "returnType": "Promise<LoginResponse>",
+          "exported": true,
+          "lineCount": 8
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "@/utils/request",
+          "specifiers": [
+            "post",
+            "get",
+            "put"
+          ]
+        },
+        {
+          "source": "@/i18n",
+          "specifiers": [
+            "i18n"
+          ]
+        }
+      ],
+      "exports": [
+        "userInfoFromApi",
+        "login",
+        "getOIDCAuthorizationURL",
+        "getOIDCConfig",
+        "getAuthConfig",
+        "register",
+        "autoSetup",
+        "getCurrentUser",
+        "updateMyPreferences",
+        "getCurrentTenant",
+        "refreshToken",
+        "logout",
+        "resolveChangePasswordError",
+        "changePassword",
+        "validateToken",
+        "getInvitationByToken",
+        "registerByInvite"
+      ],
+      "totalLines": 566,
+      "hasStructuralAnalysis": true
+    },
+    "main.ts": {
+      "filePath": "main.ts",
+      "contentHash": "eb3ce241dfd6c25e74e4c7d512d8b4bd189a7816332c023a6ce3566ef8cd4613",
+      "functions": [
+        {
+          "name": "bootstrap",
+          "params": [],
+          "exported": false,
+          "lineCount": 31
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "vue",
+          "specifiers": [
+            "createApp"
+          ]
+        },
+        {
+          "source": "pinia",
+          "specifiers": [
+            "createPinia"
+          ]
+        },
+        {
+          "source": "./App.vue",
+          "specifiers": [
+            "App"
+          ]
+        },
+        {
+          "source": "./router",
+          "specifiers": [
+            "router"
+          ]
+        },
+        {
+          "source": "tdesign-vue-next",
+          "specifiers": [
+            "TDesign"
+          ]
+        },
+        {
+          "source": "tdesign-vue-next/dist/tdesign.css",
+          "specifiers": []
+        },
+        {
+          "source": "@/assets/theme/theme.css",
+          "specifiers": []
+        },
+        {
+          "source": "@/assets/theme/tdesign-overrides.less",
+          "specifiers": []
+        },
+        {
+          "source": "@/assets/dropdown-menu.less",
+          "specifiers": []
+        },
+        {
+          "source": "@/components/css/chat-hljs-dark.less",
+          "specifiers": []
+        },
+        {
+          "source": "@/components/css/assistant-page-fill.less",
+          "specifiers": []
+        },
+        {
+          "source": "vue-virtual-scroller/dist/vue-virtual-scroller.css",
+          "specifiers": []
+        },
+        {
+          "source": "./i18n",
+          "specifiers": [
+            "i18n"
+          ]
+        },
+        {
+          "source": "@/composables/useTheme",
+          "specifiers": [
+            "initTheme"
+          ]
+        },
+        {
+          "source": "@/composables/useFont",
+          "specifiers": [
+            "initFont"
+          ]
+        },
+        {
+          "source": "@/utils/tdesign-icon-offline",
+          "specifiers": [
+            "installTDesignIconOfflineGuard"
+          ]
+        },
+        {
+          "source": "@/utils/disable-autofill",
+          "specifiers": [
+            "installAutofillGuard"
+          ]
+        },
+        {
+          "source": "@/stores/auth",
+          "specifiers": [
+            "useAuthStore"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 63,
+      "hasStructuralAnalysis": true
+    },
+    "router/index.ts": {
+      "filePath": "router/index.ts",
+      "contentHash": "b4a709b4e70859a5da95c457c7b38506f18a4080673db747c30b867a418c0a5a",
+      "functions": [
+        {
+          "name": "isLiteEdition",
+          "params": [
+            "authStore"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "isLiteSpaDefaultEntry",
+          "params": [
+            "to"
+          ],
+          "exported": false,
+          "lineCount": 8
+        },
+        {
+          "name": "isSafeLiteRestoreTarget",
+          "params": [
+            "path"
+          ],
+          "exported": false,
+          "lineCount": 3
+        },
+        {
+          "name": "hasPendingOIDCCallback",
+          "params": [],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "persistLoginResponse",
+          "params": [
+            "authStore",
+            "response"
+          ],
+          "exported": false,
+          "lineCount": 25
+        },
+        {
+          "name": "hydrateSessionFromToken",
+          "params": [
+            "authStore"
+          ],
+          "exported": false,
+          "lineCount": 17
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "vue-router",
+          "specifiers": [
+            "createRouter",
+            "createWebHistory"
+          ]
+        },
+        {
+          "source": "vue",
+          "specifiers": [
+            "defineComponent"
+          ]
+        },
+        {
+          "source": "vue-router",
+          "specifiers": [
+            "RouteLocationNormalized"
+          ]
+        },
+        {
+          "source": "@/stores/auth",
+          "specifiers": [
+            "useAuthStore"
+          ]
+        },
+        {
+          "source": "@/stores/deploymentCapabilities",
+          "specifiers": [
+            "useDeploymentCapabilitiesStore"
+          ]
+        },
+        {
+          "source": "@/api/auth",
+          "specifiers": [
+            "autoSetup",
+            "userInfoFromApi"
+          ]
+        },
+        {
+          "source": "@/config/deploymentCapabilities",
+          "specifiers": [
+            "DeploymentCapabilityKey"
+          ]
+        },
+        {
+          "source": "tdesign-vue-next",
+          "specifiers": [
+            "MessagePlugin"
+          ]
+        },
+        {
+          "source": "@/i18n",
+          "specifiers": [
+            "i18n"
+          ]
+        },
+        {
+          "source": "@/config/settingsRoute",
+          "specifiers": [
+            "normalizeSettingsSection"
+          ]
+        },
+        {
+          "source": "@/config/toolbox",
+          "specifiers": [
+            "isToolboxSection",
+            "toolboxLocation"
+          ]
+        }
+      ],
+      "exports": [],
+      "totalLines": 418,
+      "hasStructuralAnalysis": true
+    },
+    "stores/auth.ts": {
+      "filePath": "stores/auth.ts",
+      "contentHash": "56d8277a24cbd82e3f5e187f4ce2420fcd0f58f6fd6ad4c9789cb69b57ba6c68",
+      "functions": [
+        {
+          "name": "clearSessionResourceCaches",
+          "params": [],
+          "exported": false,
+          "lineCount": 5
+        },
+        {
+          "name": "reloadUserPreferences",
+          "params": [],
+          "exported": false,
+          "lineCount": 6
+        }
+      ],
+      "classes": [],
+      "imports": [
+        {
+          "source": "pinia",
+          "specifiers": [
+            "defineStore"
+          ]
+        },
+        {
+          "source": "vue",
+          "specifiers": [
+            "ref",
+            "computed"
+          ]
+        },
+        {
+          "source": "@/api/auth",
+          "specifiers": [
+            "UserInfo",
+            "TenantInfo",
+            "KnowledgeBaseInfo"
+          ]
+        },
+        {
+          "source": "@/api/auth",
+          "specifiers": [
+            "userInfoFromApi"
+          ]
+        },
+        {
+          "source": "@/api/tenant",
+          "specifiers": [
+            "TenantInfoFromAPI"
+          ]
+        },
+        {
+          "source": "@/i18n",
+          "specifiers": [
+            "i18n"
+          ]
+        },
+        {
+          "source": "@/composables/useFont",
+          "specifiers": [
+            "reloadFontFromStorage"
+          ]
+        },
+        {
+          "source": "@/composables/useTheme",
+          "specifiers": [
+            "reloadThemeFromStorage"
+          ]
+        },
+        {
+          "source": "@/composables/preferenceStorage",
+          "specifiers": [
+            "resetMigrationLatch"
+          ]
+        },
+        {
+          "source": "@/api/agent",
+          "specifiers": [
+            "BUILTIN_QUICK_ANSWER_ID"
+          ]
+        },
+        {
+          "source": "@/stores/chatResources",
+          "specifiers": [
+            "useChatResourcesStore"
+          ]
+        },
+        {
+          "source": "@/stores/editorResources",
+          "specifiers": [
+            "useEditorResourcesStore"
+          ]
+        },
+        {
+          "source": "@/stores/organization",
+          "specifiers": [
+            "useOrganizationStore"
+          ]
+        },
+        {
+          "source": "@/stores/sequencedRefresh",
+          "specifiers": [
+            "createSequencedRefresh"
+          ]
+        }
+      ],
+      "exports": [
+        "useAuthStore"
+      ],
+      "totalLines": 624,
+      "hasStructuralAnalysis": true
+    },
+    "stores/settings.ts": {
+      "filePath": "stores/settings.ts",
+      "contentHash": "04a967eb5c1307d345de7099c01e8a90f2b2527e56f2ff23d496508df1848e2b",
+      "functions": [],
+      "classes": [],
+      "imports": [
+        {
+          "source": "pinia",
+          "specifiers": [
+            "defineStore"
+          ]
+        },
+        {
+          "source": "vue",
+          "specifiers": [
+            "nextTick"
+          ]
+        },
+        {
+          "source": "@/api/agent",
+          "specifiers": [
+            "BUILTIN_QUICK_ANSWER_ID",
+            "BUILTIN_SMART_REASONING_ID"
+          ]
+        },
+        {
+          "source": "@/utils/api-base",
+          "specifiers": [
+            "getApiBaseUrl"
+          ]
+        },
+        {
+          "source": "@/utils/agent-mode",
+          "specifiers": [
+            "isAgentStreamAgentId"
+          ]
+        },
+        {
+          "source": "@/stores/settingsStorage",
+          "specifiers": [
+            "loadAndReconcileSettings"
+          ]
+        },
+        {
+          "source": "@/utils/reasoningEffort",
+          "specifiers": [
+            "isReasoningLevel",
+            "ReasoningLevel"
+          ]
+        }
+      ],
+      "exports": [
+        "useSettingsStore"
+      ],
+      "totalLines": 642,
+      "hasStructuralAnalysis": true
+    }
+  }
+}

@@ -1,0 +1,13 @@
+﻿# 中文小范围分析：入口、路由、认证状态、认证 API
+*
+!.ua/
+!main.ts
+!App.vue
+!router/
+!router/index.ts
+!stores/
+!stores/auth.ts
+!stores/settings.ts
+!api/
+!api/auth/
+!api/auth/index.ts
