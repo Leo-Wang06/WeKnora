@@ -1,0 +1,3452 @@
+{
+  "version": "1.0.0",
+  "project": {
+    "name": "WeKnora 前后端亮点学习图",
+    "description": "按十五个前后端技术亮点分类的代码学习导航图；聚焦可核实的调用、依赖、安全与故障恢复链路。",
+    "languages": [
+      "TypeScript",
+      "Vue",
+      "Go"
+    ],
+    "frameworks": [
+      "Vue 3",
+      "Pinia",
+      "Vue Router",
+      "Vite",
+      "Gin",
+      "Asynq",
+      "Redis",
+      "GORM"
+    ],
+    "analyzedAt": "2026-11-09T15:29:54.765Z",
+    "gitCommitHash": "ef54f772fa6921368de9334ce37507095be0c768"
+  },
+  "nodes": [
+    {
+      "id": "file:frontend/src/main.ts",
+      "type": "file",
+      "name": "main.ts",
+      "filePath": "frontend/src/main.ts",
+      "summary": "启动前安装全局能力，已有会话先校准 /auth/me；首屏导航完成后再挂载。",
+      "tags": [
+        "启动与认证"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:frontend/src/router/index.ts",
+      "type": "file",
+      "name": "index.ts",
+      "filePath": "frontend/src/router/index.ts",
+      "summary": "路由门禁负责会话恢复、Lite 自动登录、能力限制与页面跳转；只提供 UI 层保护。",
+      "tags": [
+        "启动与认证"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:frontend/src/stores/auth.ts",
+      "type": "file",
+      "name": "auth.ts",
+      "filePath": "frontend/src/stores/auth.ts",
+      "summary": "Pinia 持有当前身份及活动租户；登出使飞行请求失效并清空空间资源缓存。",
+      "tags": [
+        "启动与认证"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:frontend/src/api/auth/index.ts",
+      "type": "file",
+      "name": "index.ts",
+      "filePath": "frontend/src/api/auth/index.ts",
+      "summary": "封装 /auth/me、自动登录和刷新 Token 的前端 API 契约。",
+      "tags": [
+        "启动与认证"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/main.ts:bootstrap",
+      "type": "function",
+      "name": "bootstrap",
+      "filePath": "frontend/src/main.ts",
+      "lineRange": [
+        30,
+        60
+      ],
+      "summary": "安装 Pinia 后先刷新已存在会话，再等待 router.isReady，避免页面闪跳。",
+      "tags": [
+        "启动与认证"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/router/index.ts:beforeEach",
+      "type": "function",
+      "name": "beforeEach",
+      "filePath": "frontend/src/router/index.ts",
+      "lineRange": [
+        287,
+        408
+      ],
+      "summary": "认证、租户 onboarding、Lite 和能力门禁合并于异步导航流程；后端仍独立授权。",
+      "tags": [
+        "启动与认证"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/stores/auth.ts:refreshFromAuthMe",
+      "type": "function",
+      "name": "refreshFromAuthMe",
+      "filePath": "frontend/src/stores/auth.ts",
+      "lineRange": [
+        361,
+        361
+      ],
+      "summary": "借助 authMeRequest 排序校准请求；登出后忽略旧 /auth/me 响应。",
+      "tags": [
+        "启动与认证"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/api/auth/index.ts:getCurrentUser",
+      "type": "function",
+      "name": "getCurrentUser",
+      "filePath": "frontend/src/api/auth/index.ts",
+      "lineRange": [
+        354,
+        364
+      ],
+      "summary": "通过 /auth/me 获取用户、租户、成员关系与部署能力。",
+      "tags": [
+        "启动与认证"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:GET:/api/v1/auth/me",
+      "type": "endpoint",
+      "name": "GET /api/v1/auth/me",
+      "summary": "后端认证中间件校验身份并返回当前会话视图。",
+      "tags": [
+        "启动与认证"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:internal/handler/auth.go",
+      "type": "file",
+      "name": "auth.go",
+      "filePath": "internal/handler/auth.go",
+      "summary": "服务端验证 JWT/API Key 身份并返回当前用户、租户与部署能力。",
+      "tags": [
+        "启动与认证"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/handler/auth.go:GetCurrentUser",
+      "type": "function",
+      "name": "GetCurrentUser",
+      "filePath": "internal/handler/auth.go",
+      "lineRange": [
+        643,
+        699
+      ],
+      "summary": "构造当前调用者可见的用户/租户、成员关系与部署能力。",
+      "tags": [
+        "启动与认证"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:frontend/src/utils/request.ts",
+      "type": "file",
+      "name": "request.ts",
+      "filePath": "frontend/src/utils/request.ts",
+      "summary": "Axios 请求附 Bearer/Embed 鉴权、语言与租户上下文；401 则通过共享刷新器重放。",
+      "tags": [
+        "共享鉴权刷新"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:frontend/src/utils/authRefresh.ts",
+      "type": "file",
+      "name": "authRefresh.ts",
+      "filePath": "frontend/src/utils/authRefresh.ts",
+      "summary": "单次刷新、多请求排队及 Refresh Token 轮换；SSE 的 401 也复用此机制。",
+      "tags": [
+        "共享鉴权刷新"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/utils/request.ts:request.use",
+      "type": "function",
+      "name": "request.use",
+      "filePath": "frontend/src/utils/request.ts",
+      "lineRange": [
+        72,
+        108
+      ],
+      "summary": "Axios 请求拦截器区分 Bearer 与嵌入 Embed 身份，注入语言和租户 Header。",
+      "tags": [
+        "共享鉴权刷新"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/utils/request.ts:response.use",
+      "type": "function",
+      "name": "response.use",
+      "filePath": "frontend/src/utils/request.ts",
+      "lineRange": [
+        125,
+        229
+      ],
+      "summary": "Axios 响应拦截器排除 Embed/公开路由的 401 后刷新一次 Token 并重放原请求。",
+      "tags": [
+        "共享鉴权刷新"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/utils/authRefresh.ts:refreshAccessTokenShared",
+      "type": "function",
+      "name": "refreshAccessTokenShared",
+      "filePath": "frontend/src/utils/authRefresh.ts",
+      "lineRange": [
+        109,
+        148
+      ],
+      "summary": "并发请求进入等待队列，只有一次刷新；轮换失败清凭证并拒绝等待者。",
+      "tags": [
+        "共享鉴权刷新"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/utils/authRefresh.ts:runStreamWithAuthRetry",
+      "type": "function",
+      "name": "runStreamWithAuthRetry",
+      "filePath": "frontend/src/utils/authRefresh.ts",
+      "lineRange": [
+        157,
+        189
+      ],
+      "summary": "SSE 握手 401 后刷新 Token 并且仅当当前流未被替换时重试。",
+      "tags": [
+        "共享鉴权刷新"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:POST:/api/v1/auth/refresh",
+      "type": "endpoint",
+      "name": "POST /api/v1/auth/refresh",
+      "summary": "短期 Access Token 失效后轮换会话凭证。",
+      "tags": [
+        "共享鉴权刷新"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:frontend/src/api/auth/index.ts:refreshToken",
+      "type": "function",
+      "name": "refreshToken",
+      "filePath": "frontend/src/api/auth/index.ts",
+      "lineRange": [
+        402,
+        428
+      ],
+      "summary": "使用 Refresh Token 向认证路由交换新的令牌对。",
+      "tags": [
+        "共享鉴权刷新"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/handler/auth.go:RefreshToken",
+      "type": "function",
+      "name": "RefreshToken",
+      "filePath": "internal/handler/auth.go",
+      "lineRange": [
+        599,
+        631
+      ],
+      "summary": "服务端校验 Refresh Token 并返回新令牌对。",
+      "tags": [
+        "共享鉴权刷新"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:frontend/src/views/chat/index.vue",
+      "type": "file",
+      "name": "index.vue",
+      "filePath": "frontend/src/views/chat/index.vue",
+      "summary": "聊天页组合发送请求、流状态、消息视图和事件回调。",
+      "tags": [
+        "流式聊天"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:frontend/src/api/chat/streame.ts",
+      "type": "file",
+      "name": "streame.ts",
+      "filePath": "frontend/src/api/chat/streame.ts",
+      "summary": "fetch-event-source 建立可取消的 SSE；重连、续传和旧流代际隔离。",
+      "tags": [
+        "流式聊天"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:frontend/src/composables/useChatStreamHandler.ts",
+      "type": "file",
+      "name": "useChatStreamHandler.ts",
+      "filePath": "frontend/src/composables/useChatStreamHandler.ts",
+      "summary": "把 query、工具、回答、审批和完成事件归并为可渲染消息状态。",
+      "tags": [
+        "流式聊天"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/api/chat/streame.ts:startStream",
+      "type": "function",
+      "name": "startStream",
+      "filePath": "frontend/src/api/chat/streame.ts",
+      "lineRange": [
+        74,
+        349
+      ],
+      "summary": "组装流请求，处理认证重试、断线续接与 assistant 消息的增量事件。",
+      "tags": [
+        "流式聊天"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/composables/useChatStreamHandler.ts:processStreamChunk",
+      "type": "function",
+      "name": "processStreamChunk",
+      "filePath": "frontend/src/composables/useChatStreamHandler.ts",
+      "lineRange": [
+        1548,
+        1807
+      ],
+      "summary": "归并 agent_query、answer、工具与完成事件，保持持久化消息的身份。",
+      "tags": [
+        "流式聊天"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:POST:/api/v1/agent-chat/:session_id",
+      "type": "endpoint",
+      "name": "POST /api/v1/agent-chat/:session_id",
+      "summary": "发起 Agent 回合并开始生成。",
+      "tags": [
+        "流式聊天"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "endpoint:GET:/api/v1/sessions/continue-stream/:session_id",
+      "type": "endpoint",
+      "name": "GET /api/v1/sessions/continue-stream/:session_id",
+      "summary": "通过 message_id 获取运行中消息的事件回放。",
+      "tags": [
+        "流式聊天"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:frontend/src/stores/resourceCache.ts",
+      "type": "file",
+      "name": "resourceCache.ts",
+      "filePath": "frontend/src/stores/resourceCache.ts",
+      "summary": "共享资源的 single-flight、失效和按 key 的快照缓存。",
+      "tags": [
+        "异步竞态与缓存"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:frontend/src/stores/versionedRequest.ts",
+      "type": "file",
+      "name": "versionedRequest.ts",
+      "filePath": "frontend/src/stores/versionedRequest.ts",
+      "summary": "按请求版本抑制旧结果回写，force 刷新在飞行请求后执行。",
+      "tags": [
+        "异步竞态与缓存"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:frontend/src/stores/chatResources.ts",
+      "type": "file",
+      "name": "chatResources.ts",
+      "filePath": "frontend/src/stores/chatResources.ts",
+      "summary": "将资源缓存实例连接到知识库、Agent、模型和聊天数据变更事件。",
+      "tags": [
+        "异步竞态与缓存"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/stores/resourceCache.ts:createCachedResource",
+      "type": "function",
+      "name": "createCachedResource",
+      "filePath": "frontend/src/stores/resourceCache.ts",
+      "lineRange": [
+        26,
+        59
+      ],
+      "summary": "ensure 合并在飞行请求，invalidate 与 markLoaded 禁止迟到响应覆盖状态。",
+      "tags": [
+        "异步竞态与缓存"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/stores/resourceCache.ts:createKeyedSnapshotCache",
+      "type": "function",
+      "name": "createKeyedSnapshotCache",
+      "filePath": "frontend/src/stores/resourceCache.ts",
+      "lineRange": [
+        66,
+        111
+      ],
+      "summary": "每个 key 按代际管理快照与在飞行请求，显式失效后重新获取。",
+      "tags": [
+        "异步竞态与缓存"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/stores/versionedRequest.ts:createVersionedRequestCoordinator",
+      "type": "function",
+      "name": "createVersionedRequestCoordinator",
+      "filePath": "frontend/src/stores/versionedRequest.ts",
+      "lineRange": [
+        14,
+        91
+      ],
+      "summary": "给单次资源读取加 revision，识别旧响应并串行处理强制刷新。",
+      "tags": [
+        "异步竞态与缓存"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:frontend/src/stores/uploadTasks.ts",
+      "type": "file",
+      "name": "uploadTasks.ts",
+      "filePath": "frontend/src/stores/uploadTasks.ts",
+      "summary": "将上传任务队列接到知识库上传及批量查询 API。",
+      "tags": [
+        "上传任务调度"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:frontend/src/stores/uploadTasksCore.ts",
+      "type": "file",
+      "name": "uploadTasksCore.ts",
+      "filePath": "frontend/src/stores/uploadTasksCore.ts",
+      "summary": "构造响应式任务与传输队列，将网络、定时器、回调作为依赖注入。",
+      "tags": [
+        "上传任务调度"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:frontend/src/stores/uploadQueue.ts",
+      "type": "file",
+      "name": "uploadQueue.ts",
+      "filePath": "frontend/src/stores/uploadQueue.ts",
+      "summary": "有界并发传输、Abort 取消、失败重试和分块轮询解析状态。",
+      "tags": [
+        "上传任务调度"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:frontend/src/api/knowledge-base/index.ts",
+      "type": "file",
+      "name": "index.ts",
+      "filePath": "frontend/src/api/knowledge-base/index.ts",
+      "summary": "知识上传与批量状态查询的 HTTP API 适配层。",
+      "tags": [
+        "上传任务调度"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/api/knowledge-base/index.ts:uploadKnowledgeFile",
+      "type": "function",
+      "name": "uploadKnowledgeFile",
+      "filePath": "frontend/src/api/knowledge-base/index.ts",
+      "lineRange": [
+        495,
+        520
+      ],
+      "summary": "把文件数据打包为 FormData，传递进度回调和 AbortSignal。",
+      "tags": [
+        "上传任务调度"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/stores/uploadQueue.ts:createUploadQueue",
+      "type": "function",
+      "name": "createUploadQueue",
+      "filePath": "frontend/src/stores/uploadQueue.ts",
+      "lineRange": [
+        92,
+        340
+      ],
+      "summary": "任务与 File 句柄分离；并发 pump、分片状态轮询、取消与 clear 的代际隔离。",
+      "tags": [
+        "上传任务调度"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "endpoint:POST:/api/v1/knowledge-bases/:id/knowledge/file",
+      "type": "endpoint",
+      "name": "POST /api/v1/knowledge-bases/:id/knowledge/file",
+      "summary": "文件入库的受保护上传入口。",
+      "tags": [
+        "上传任务调度"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:frontend/src/views/chat/components/botmsg.vue",
+      "type": "file",
+      "name": "botmsg.vue",
+      "filePath": "frontend/src/views/chat/components/botmsg.vue",
+      "summary": "流式回答中的 Markdown 在插入 DOM 前按策略消毒，延后加载鉴权资源。",
+      "tags": [
+        "内容安全"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:frontend/src/utils/security.ts",
+      "type": "file",
+      "name": "security.ts",
+      "filePath": "frontend/src/utils/security.ts",
+      "summary": "DOMPurify 策略钩子与受保护文件的鉴权图片水合。",
+      "tags": [
+        "内容安全"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:frontend/src/utils/markdownDomPurify.ts",
+      "type": "file",
+      "name": "markdownDomPurify.ts",
+      "filePath": "frontend/src/utils/markdownDomPurify.ts",
+      "summary": "限制 Markdown、KaTeX、Mermaid 的 HTML/SVG 标签、属性与 URL 协议。",
+      "tags": [
+        "内容安全"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:frontend/src/utils/protectedFileAccess.ts",
+      "type": "file",
+      "name": "protectedFileAccess.ts",
+      "filePath": "frontend/src/utils/protectedFileAccess.ts",
+      "summary": "带鉴权的源文件访问策略，不把身份凭证拼入图片 URL。",
+      "tags": [
+        "内容安全"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/utils/security.ts:sanitizeMarkdownHTML",
+      "type": "function",
+      "name": "sanitizeMarkdownHTML",
+      "filePath": "frontend/src/utils/security.ts",
+      "lineRange": [
+        170,
+        186
+      ],
+      "summary": "预处理受保护图片后在 DOMPurify 安全钩子和配置下清洗 HTML。",
+      "tags": [
+        "内容安全"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:frontend/src/utils/security.ts:hydrateProtectedFileImages",
+      "type": "function",
+      "name": "hydrateProtectedFileImages",
+      "filePath": "frontend/src/utils/security.ts",
+      "lineRange": [
+        606,
+        724
+      ],
+      "summary": "异步获取鉴权图片，合并在飞行读取并丢弃迟到或已失效的结果。",
+      "tags": [
+        "内容安全"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:frontend/src/components/document-preview.vue",
+      "type": "file",
+      "name": "document-preview.vue",
+      "filePath": "frontend/src/components/document-preview.vue",
+      "summary": "DOCX/PDF/PPTX/XLSX 等不同格式预览，支持定位原文和按需加载重依赖。",
+      "tags": [
+        "文档预览与构建"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:frontend/src/components/source-preview/PdfSourceViewer.vue",
+      "type": "file",
+      "name": "PdfSourceViewer.vue",
+      "filePath": "frontend/src/components/source-preview/PdfSourceViewer.vue",
+      "summary": "独立 PDF 预览与来源定位组件，按需加载。",
+      "tags": [
+        "文档预览与构建"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:frontend/vite.config.ts",
+      "type": "file",
+      "name": "vite.config.ts",
+      "filePath": "frontend/vite.config.ts",
+      "summary": "Vite 主页面/Embed 双入口、依赖拆包、PDF.js WASM 资源和独立预加载优化。",
+      "tags": [
+        "文档预览与构建"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:frontend/src/embed-main.ts",
+      "type": "file",
+      "name": "embed-main.ts",
+      "filePath": "frontend/src/embed-main.ts",
+      "summary": "Embed iframe 拥有独立入口、路由和 i18n；不复用主应用首屏。",
+      "tags": [
+        "文档预览与构建"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:frontend/src/i18n/localeKeyAudit.ts",
+      "type": "file",
+      "name": "localeKeyAudit.ts",
+      "filePath": "frontend/src/i18n/localeKeyAudit.ts",
+      "summary": "扫描源码中的固定和动态国际化键，检查各语言缺失与消息编译错误。",
+      "tags": [
+        "国际化与质量门禁"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:frontend/src/i18n/localeKeyAudit.test.ts",
+      "type": "file",
+      "name": "localeKeyAudit.test.ts",
+      "filePath": "frontend/src/i18n/localeKeyAudit.test.ts",
+      "summary": "为语言包 key 审计和裁剪后回归提供测试。",
+      "tags": [
+        "国际化与质量门禁"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:frontend/src/assets/theme/styleGuard.test.mjs",
+      "type": "file",
+      "name": "styleGuard.test.mjs",
+      "filePath": "frontend/src/assets/theme/styleGuard.test.mjs",
+      "summary": "基线棘轮阻止硬编码样式、!important 和旧颜色继续增长。",
+      "tags": [
+        "国际化与质量门禁"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:frontend/src/i18n/localeKeyAudit.ts:collectI18nUsageFromSources",
+      "type": "function",
+      "name": "collectI18nUsageFromSources",
+      "filePath": "frontend/src/i18n/localeKeyAudit.ts",
+      "lineRange": [
+        295,
+        369
+      ],
+      "summary": "扫描源码中的静态键、模板键与特殊动态前缀。",
+      "tags": [
+        "国际化与质量门禁"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:internal/handler/knowledge.go",
+      "type": "file",
+      "name": "knowledge.go",
+      "filePath": "internal/handler/knowledge.go",
+      "summary": "文件上传 Handler 校验请求并调用知识摄入服务。",
+      "tags": [
+        "文档入库"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:internal/application/service/knowledge_create.go",
+      "type": "file",
+      "name": "knowledge_create.go",
+      "filePath": "internal/application/service/knowledge_create.go",
+      "summary": "文件、知识记录与任务队列之间以 pending/failed 状态和补偿维持一致性。",
+      "tags": [
+        "文档入库"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:internal/router/task.go",
+      "type": "file",
+      "name": "task.go",
+      "filePath": "internal/router/task.go",
+      "summary": "Asynq 任务分流及 worker pool 容量配置。",
+      "tags": [
+        "文档入库"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:internal/application/service/knowledge_process.go",
+      "type": "file",
+      "name": "knowledge_process.go",
+      "filePath": "internal/application/service/knowledge_process.go",
+      "summary": "后台校验租户和任务代际，解析、分块、持久化后构建索引。",
+      "tags": [
+        "文档入库"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:internal/infrastructure/chunker/strategy.go",
+      "type": "file",
+      "name": "strategy.go",
+      "filePath": "internal/infrastructure/chunker/strategy.go",
+      "summary": "分块策略与父子块切分，输入不合法时选择受控降级。",
+      "tags": [
+        "文档入库"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:internal/application/service/retriever/keywords_vector_hybrid_indexer.go",
+      "type": "file",
+      "name": "keywords_vector_hybrid_indexer.go",
+      "filePath": "internal/application/service/retriever/keywords_vector_hybrid_indexer.go",
+      "summary": "对索引输入分窗计算 embedding 并有界并发持久化。",
+      "tags": [
+        "文档入库"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/handler/knowledge.go:CreateKnowledgeFromFile",
+      "type": "function",
+      "name": "CreateKnowledgeFromFile",
+      "filePath": "internal/handler/knowledge.go",
+      "lineRange": [
+        313,
+        441
+      ],
+      "summary": "校验上传参数并进入服务层；请求侧需先通过 KB 写入权限。",
+      "tags": [
+        "文档入库"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/application/service/knowledge_create.go:createKnowledgeFromFile",
+      "type": "function",
+      "name": "createKnowledgeFromFile",
+      "filePath": "internal/application/service/knowledge_create.go",
+      "lineRange": [
+        36,
+        305
+      ],
+      "summary": "先保存文件，再落 pending 记录，最后投递文档任务；失败状态和清理弥补跨系统事务。",
+      "tags": [
+        "文档入库"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/application/service/knowledge_process.go:ProcessDocument",
+      "type": "function",
+      "name": "ProcessDocument",
+      "filePath": "internal/application/service/knowledge_process.go",
+      "lineRange": [
+        3770,
+        4304
+      ],
+      "summary": "处理 Asynq 文档任务，核验租户、KB、重试代际后调用解析/分块流程。",
+      "tags": [
+        "文档入库"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/application/service/knowledge_process.go:processChunks",
+      "type": "function",
+      "name": "processChunks",
+      "filePath": "internal/application/service/knowledge_process.go",
+      "lineRange": [
+        402,
+        960
+      ],
+      "summary": "持久化分块并筛选可检索子块建索引；失败时清理索引并决定重试或终态。",
+      "tags": [
+        "文档入库"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/infrastructure/chunker/strategy.go:Split",
+      "type": "function",
+      "name": "Split",
+      "filePath": "internal/infrastructure/chunker/strategy.go",
+      "lineRange": [
+        34,
+        58
+      ],
+      "summary": "按配置分块并验证，异常时回退策略；父子分块入口另由 SplitParentChild 实现。",
+      "tags": [
+        "文档入库"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/application/service/retriever/keywords_vector_hybrid_indexer.go:BatchIndex",
+      "type": "function",
+      "name": "BatchIndex",
+      "filePath": "internal/application/service/retriever/keywords_vector_hybrid_indexer.go",
+      "lineRange": [
+        88,
+        153
+      ],
+      "summary": "40×5 条数据为一窗，先算 embedding 后有界并发写入，控制内存峰值。",
+      "tags": [
+        "文档入库"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "resource:document:process",
+      "type": "resource",
+      "name": "document:process",
+      "summary": "Asynq 后台文档任务：上传接口可快速返回，解析、索引异步执行。",
+      "tags": [
+        "文档入库"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:internal/application/service/knowledgebase_search.go",
+      "type": "file",
+      "name": "knowledgebase_search.go",
+      "filePath": "internal/application/service/knowledgebase_search.go",
+      "summary": "逐 KB 授权与模型一致性检查，多索引分组召回和融合。",
+      "tags": [
+        "混合检索与重排"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:internal/application/service/knowledgebase_search_fusion.go",
+      "type": "file",
+      "name": "knowledgebase_search_fusion.go",
+      "filePath": "internal/application/service/knowledgebase_search_fusion.go",
+      "summary": "向量与 BM25 单路归一，以及跨结果列表的加权 RRF 融合。",
+      "tags": [
+        "混合检索与重排"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:internal/application/service/knowledgebase_search_rerank.go",
+      "type": "file",
+      "name": "knowledgebase_search_rerank.go",
+      "filePath": "internal/application/service/knowledgebase_search_rerank.go",
+      "summary": "扩大候选后调用重排阶段，并补齐父块与相邻上下文。",
+      "tags": [
+        "混合检索与重排"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:internal/reranking/rerank.go",
+      "type": "file",
+      "name": "rerank.go",
+      "filePath": "internal/reranking/rerank.go",
+      "summary": "rerank 模型失败时保留召回顺序；阈值、复合分数和 MMR 控制结果。",
+      "tags": [
+        "混合检索与重排"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:internal/types/interfaces/retriever.go",
+      "type": "file",
+      "name": "retriever.go",
+      "filePath": "internal/types/interfaces/retriever.go",
+      "summary": "检索/索引接口隔离算法与 PostgreSQL、SQLite、ES 等持久化实现。",
+      "tags": [
+        "混合检索与重排"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/application/service/knowledgebase_search.go:hybridSearchCandidates",
+      "type": "function",
+      "name": "hybridSearchCandidates",
+      "filePath": "internal/application/service/knowledgebase_search.go",
+      "lineRange": [
+        212,
+        384
+      ],
+      "summary": "逐 KB 授权与 embedding identity 校验，分组并发召回后进入融合。",
+      "tags": [
+        "混合检索与重排"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/application/service/knowledgebase_search_fusion.go:fuseOrDeduplicate",
+      "type": "function",
+      "name": "fuseOrDeduplicate",
+      "filePath": "internal/application/service/knowledgebase_search_fusion.go",
+      "lineRange": [
+        58,
+        84
+      ],
+      "summary": "单路向量原分保留、BM25 按列表归一；双路加权 RRF。",
+      "tags": [
+        "混合检索与重排"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/application/service/knowledgebase_search_fusion.go:fuseWithRRF",
+      "type": "function",
+      "name": "fuseWithRRF",
+      "filePath": "internal/application/service/knowledgebase_search_fusion.go",
+      "lineRange": [
+        170,
+        219
+      ],
+      "summary": "分别取检索列表的排名，计算加权 RRF 并归一到可比较分数。",
+      "tags": [
+        "混合检索与重排"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/application/service/knowledgebase_search_rerank.go:HybridSearchWithRerank",
+      "type": "function",
+      "name": "HybridSearchWithRerank",
+      "filePath": "internal/application/service/knowledgebase_search_rerank.go",
+      "lineRange": [
+        64,
+        152
+      ],
+      "summary": "独立于 HybridSearch 的重排入口：扩候选、重排并富化上下文。",
+      "tags": [
+        "混合检索与重排"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/reranking/rerank.go:Rerank",
+      "type": "function",
+      "name": "Rerank",
+      "filePath": "internal/reranking/rerank.go",
+      "lineRange": [
+        111,
+        231
+      ],
+      "summary": "模型失败回退原召回顺序；阈值、TopK 与 MMR 选择并保留图像结果。",
+      "tags": [
+        "混合检索与重排"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/application/service/knowledgebase_search_rerank.go:rerankCandidates",
+      "type": "function",
+      "name": "rerankCandidates",
+      "filePath": "internal/application/service/knowledgebase_search_rerank.go",
+      "lineRange": [
+        157,
+        198
+      ],
+      "summary": "解析租户 rerank 模型，并将候选结果传入独立重排器。",
+      "tags": [
+        "混合检索与重排"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:internal/application/service/session_agent_qa.go",
+      "type": "file",
+      "name": "session_agent_qa.go",
+      "filePath": "internal/application/service/session_agent_qa.go",
+      "summary": "会话 Agent 回合从历史恢复工具状态，装配引擎并执行/恢复。",
+      "tags": [
+        "Agent 执行"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:internal/agent/engine.go",
+      "type": "file",
+      "name": "engine.go",
+      "filePath": "internal/agent/engine.go",
+      "summary": "ReAct 循环包含 token 预算、轮数限制、取消和工具调用防死循环机制。",
+      "tags": [
+        "Agent 执行"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:internal/agent/act.go",
+      "type": "file",
+      "name": "act.go",
+      "filePath": "internal/agent/act.go",
+      "summary": "拒绝截断参数；有限并行内建只读工具，写入/未知/MCP 工具形成屏障。",
+      "tags": [
+        "Agent 执行"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:internal/agent/tools/execution_policy.go",
+      "type": "file",
+      "name": "execution_policy.go",
+      "filePath": "internal/agent/tools/execution_policy.go",
+      "summary": "显式可并发内建读取白名单，默认串行以维护工具的执行顺序。",
+      "tags": [
+        "Agent 执行"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/application/service/session_agent_qa.go:AgentQA",
+      "type": "function",
+      "name": "AgentQA",
+      "filePath": "internal/application/service/session_agent_qa.go",
+      "lineRange": [
+        46,
+        439
+      ],
+      "summary": "从会话历史恢复工具上下文，校验访问范围并创建 ReAct 引擎。",
+      "tags": [
+        "Agent 执行"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/agent/engine.go:executeLoop",
+      "type": "function",
+      "name": "executeLoop",
+      "filePath": "internal/agent/engine.go",
+      "lineRange": [
+        705,
+        836
+      ],
+      "summary": "循环思考-执行-观察，处理取消、轮数预算与最终回答合成。",
+      "tags": [
+        "Agent 执行"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/agent/act.go:executeToolCalls",
+      "type": "function",
+      "name": "executeToolCalls",
+      "filePath": "internal/agent/act.go",
+      "lineRange": [
+        228,
+        264
+      ],
+      "summary": "模型输出被截断时拒绝所有可能不完整的工具参数。",
+      "tags": [
+        "Agent 执行"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/agent/act.go:executeToolCallsParallel",
+      "type": "function",
+      "name": "executeToolCallsParallel",
+      "filePath": "internal/agent/act.go",
+      "lineRange": [
+        297,
+        355
+      ],
+      "summary": "只并行显式白名单中的只读工具；限并发 8，屏障隔离写操作，按模型序提交结果。",
+      "tags": [
+        "Agent 执行"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:internal/handler/session/qa.go",
+      "type": "file",
+      "name": "qa.go",
+      "filePath": "internal/handler/session/qa.go",
+      "summary": "接收聊天请求，分离 SSE 连接与后台生成，并协调生成结束后的消息落库。",
+      "tags": [
+        "流式续传与一致性"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:internal/handler/session/agent_stream_handler.go",
+      "type": "file",
+      "name": "agent_stream_handler.go",
+      "filePath": "internal/handler/session/agent_stream_handler.go",
+      "summary": "把内部 Agent 事件映射到流，暂存 complete 直到消息已保存。",
+      "tags": [
+        "流式续传与一致性"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:internal/stream/redis_manager.go",
+      "type": "file",
+      "name": "redis_manager.go",
+      "filePath": "internal/stream/redis_manager.go",
+      "summary": "用 Redis 列表保存流事件和 offset 回放，SetNX/CAS 维护活跃回合标记。",
+      "tags": [
+        "流式续传与一致性"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:internal/handler/session/stream.go",
+      "type": "file",
+      "name": "stream.go",
+      "filePath": "internal/handler/session/stream.go",
+      "summary": "验证消息归属并按 offset 回放事件，独立于生成请求连接。",
+      "tags": [
+        "流式续传与一致性"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/handler/session/qa.go:setupSSEStream",
+      "type": "function",
+      "name": "setupSSEStream",
+      "filePath": "internal/handler/session/qa.go",
+      "lineRange": [
+        779,
+        912
+      ],
+      "summary": "建立独立运行上下文和 EventBus，HTTP 断线不取消生成，但执行租约失效会传播。",
+      "tags": [
+        "流式续传与一致性"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/handler/session/qa.go:completeStreamAssistantMessage",
+      "type": "function",
+      "name": "completeStreamAssistantMessage",
+      "filePath": "internal/handler/session/qa.go",
+      "lineRange": [
+        2212,
+        2245
+      ],
+      "summary": "只有 UpdateMessage 成功后才发布 complete，避免客户端误认为持久化完成。",
+      "tags": [
+        "流式续传与一致性"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/handler/session/agent_stream_handler.go:publishCompletion",
+      "type": "function",
+      "name": "publishCompletion",
+      "filePath": "internal/handler/session/agent_stream_handler.go",
+      "lineRange": [
+        1105,
+        1129
+      ],
+      "summary": "收到持久化成功信号后向事件流发布暂存的完成帧。",
+      "tags": [
+        "流式续传与一致性"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/stream/redis_manager.go:AppendEvent",
+      "type": "function",
+      "name": "AppendEvent",
+      "filePath": "internal/stream/redis_manager.go",
+      "lineRange": [
+        72,
+        102
+      ],
+      "summary": "RPUSH 事件并刷新 TTL，维持活跃回合租约。",
+      "tags": [
+        "流式续传与一致性"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/stream/redis_manager.go:GetEvents",
+      "type": "function",
+      "name": "GetEvents",
+      "filePath": "internal/stream/redis_manager.go",
+      "lineRange": [
+        114,
+        156
+      ],
+      "summary": "LRANGE 从 offset 读取增量事件供 SSE 断线续传。",
+      "tags": [
+        "流式续传与一致性"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/handler/session/stream.go:ContinueStream",
+      "type": "function",
+      "name": "ContinueStream",
+      "filePath": "internal/handler/session/stream.go",
+      "lineRange": [
+        37,
+        229
+      ],
+      "summary": "校验可见会话及 assistant 消息后按偏移回放并维持心跳。",
+      "tags": [
+        "流式续传与一致性"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:internal/datasource/connector.go",
+      "type": "file",
+      "name": "connector.go",
+      "filePath": "internal/datasource/connector.go",
+      "summary": "标准连接器、流式 Emit/Checkpoint 接口，支持分页和恢复。",
+      "tags": [
+        "数据源同步"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:internal/application/service/datasource_service.go",
+      "type": "file",
+      "name": "datasource_service.go",
+      "filePath": "internal/application/service/datasource_service.go",
+      "summary": "全量/增量同步，逐项 ingest 后保存游标与运行统计。",
+      "tags": [
+        "数据源同步"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/application/service/datasource_service.go:ProcessSync",
+      "type": "function",
+      "name": "ProcessSync",
+      "filePath": "internal/application/service/datasource_service.go",
+      "lineRange": [
+        628,
+        859
+      ],
+      "summary": "处理 Asynq 同步任务，验证数据源与 KB 归属，分流流式/批量实现。",
+      "tags": [
+        "数据源同步"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/application/service/datasource_service.go:processSyncStreaming",
+      "type": "function",
+      "name": "processSyncStreaming",
+      "filePath": "internal/application/service/datasource_service.go",
+      "lineRange": [
+        1190,
+        1261
+      ],
+      "summary": "逐条摄入并在页边界 checkpoint，失败时保留已持久化游标供重试。",
+      "tags": [
+        "数据源同步"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/application/service/datasource_service.go:Emit",
+      "type": "function",
+      "name": "Emit",
+      "filePath": "internal/application/service/datasource_service.go",
+      "lineRange": [
+        1118,
+        1133
+      ],
+      "summary": "先摄入 fetched item；发生不可忽略错误即中断，禁止游标越过失败项。",
+      "tags": [
+        "数据源同步"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/application/service/datasource_service.go:Checkpoint",
+      "type": "function",
+      "name": "Checkpoint",
+      "filePath": "internal/application/service/datasource_service.go",
+      "lineRange": [
+        1138,
+        1165
+      ],
+      "summary": "摄入成功后落盘同步 cursor 和进度计数，以支持崩溃后恢复。",
+      "tags": [
+        "数据源同步"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "resource:datasource:sync",
+      "type": "resource",
+      "name": "datasource:sync",
+      "summary": "Asynq 数据源同步任务，维护游标并隔离长运行的外部 API 工作。",
+      "tags": [
+        "数据源同步"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "function:internal/application/service/datasource_service.go:applyFetchedItem",
+      "type": "function",
+      "name": "applyFetchedItem",
+      "filePath": "internal/application/service/datasource_service.go",
+      "lineRange": [
+        913,
+        1026
+      ],
+      "summary": "根据 fetched item 状态路由到删除、跳过或摄入逻辑，返回可忽略失败标记。",
+      "tags": [
+        "数据源同步"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/application/service/datasource_service.go:ingestItem",
+      "type": "function",
+      "name": "ingestItem",
+      "filePath": "internal/application/service/datasource_service.go",
+      "lineRange": [
+        1432,
+        1599
+      ],
+      "summary": "根据 datasource_id/external_id 幂等新建或替换知识，区分文件和 URL 来源。",
+      "tags": [
+        "数据源同步"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:internal/types/task.go",
+      "type": "file",
+      "name": "task.go",
+      "filePath": "internal/types/task.go",
+      "summary": "声明任务类型与各 worker pool 的队列权重；共享池只借用配置允许的任务类型。",
+      "tags": [
+        "后台任务隔离"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "pipeline:有界队列与隔离 worker",
+      "type": "pipeline",
+      "name": "有界队列与隔离 worker",
+      "summary": "核心解析、后处理、增强、维护、Wiki 各有保底容量，共享池借用空闲处理能力。",
+      "tags": [
+        "后台任务隔离"
+      ],
+      "complexity": "moderate"
+    },
+    {
+      "id": "file:internal/middleware/api_key_gate.go",
+      "type": "file",
+      "name": "api_key_gate.go",
+      "filePath": "internal/middleware/api_key_gate.go",
+      "summary": "API Key 采用与 JWT/RBAC 分离的路由策略，未登记端点默认拒绝。",
+      "tags": [
+        "多租户与出站安全"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:internal/router/routes_knowledge.go",
+      "type": "file",
+      "name": "routes_knowledge.go",
+      "filePath": "internal/router/routes_knowledge.go",
+      "summary": "上传路由串联 API Key ingest、KB owner/Admin 和 Editor grant 三道入口门禁。",
+      "tags": [
+        "多租户与出站安全"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:internal/router/rbac.go",
+      "type": "file",
+      "name": "rbac.go",
+      "filePath": "internal/router/rbac.go",
+      "summary": "KBAccessWrite 用 Editor 门槛组装路由中间件，真正授权在 RequireKBAccess。",
+      "tags": [
+        "多租户与出站安全"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:internal/middleware/kb_access.go",
+      "type": "file",
+      "name": "kb_access.go",
+      "filePath": "internal/middleware/kb_access.go",
+      "summary": "路由中间件按 KB 共享 grant 授权并写入执行上下文。",
+      "tags": [
+        "多租户与出站安全"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:internal/application/access/kb_write.go",
+      "type": "file",
+      "name": "kb_write.go",
+      "filePath": "internal/application/access/kb_write.go",
+      "summary": "KB 写入需明确授权，后台 worker 仅能为已核实归属的单个 KB 取得 task grant。",
+      "tags": [
+        "多租户与出站安全"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:internal/application/service/knowledgebase_access.go",
+      "type": "file",
+      "name": "knowledgebase_access.go",
+      "filePath": "internal/application/service/knowledgebase_access.go",
+      "summary": "业务操作通过 requireKBWrite 进入领域授权，再切换到知识库所属租户执行。",
+      "tags": [
+        "多租户与出站安全"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "file:internal/utils/security.go",
+      "type": "file",
+      "name": "security.go",
+      "filePath": "internal/utils/security.go",
+      "summary": "对出站 URL、重定向、DNS 解析与拨号目标做分层 SSRF 校验。",
+      "tags": [
+        "多租户与出站安全"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/middleware/api_key_gate.go:authorize",
+      "type": "function",
+      "name": "authorize",
+      "filePath": "internal/middleware/api_key_gate.go",
+      "lineRange": [
+        130,
+        153
+      ],
+      "summary": "机器身份需显式匹配路由策略和 capability，未注册路由默认拒绝。",
+      "tags": [
+        "多租户与出站安全"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/router/routes_knowledge.go:RegisterKnowledgeRoutes",
+      "type": "function",
+      "name": "RegisterKnowledgeRoutes",
+      "filePath": "internal/router/routes_knowledge.go",
+      "lineRange": [
+        67,
+        84
+      ],
+      "summary": "POST /knowledge/file 组合机器身份、owner/Admin 与 KB Editor 写权限。",
+      "tags": [
+        "多租户与出站安全"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/router/rbac.go:KBAccessWrite",
+      "type": "function",
+      "name": "KBAccessWrite",
+      "filePath": "internal/router/rbac.go",
+      "lineRange": [
+        571,
+        580
+      ],
+      "summary": "构造要求 Editor 权限的 KB 写入中间件。",
+      "tags": [
+        "多租户与出站安全"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/middleware/kb_access.go:RequireKBAccess",
+      "type": "function",
+      "name": "RequireKBAccess",
+      "filePath": "internal/middleware/kb_access.go",
+      "lineRange": [
+        184,
+        244
+      ],
+      "summary": "验证 API Key KB 白名单并解析 KB grant，注入执行租户上下文。",
+      "tags": [
+        "多租户与出站安全"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/application/access/kb_write.go:RequireKBWrite",
+      "type": "function",
+      "name": "RequireKBWrite",
+      "filePath": "internal/application/access/kb_write.go",
+      "lineRange": [
+        12,
+        24
+      ],
+      "summary": "检查 API Key ingest 能力和 KB Editor 授权，租户身份本身不足以授予写权限。",
+      "tags": [
+        "多租户与出站安全"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/application/service/knowledgebase_access.go:requireKBWrite",
+      "type": "function",
+      "name": "requireKBWrite",
+      "filePath": "internal/application/service/knowledgebase_access.go",
+      "lineRange": [
+        74,
+        79
+      ],
+      "summary": "将领域写入授权和所属租户执行上下文收敛到共享入口。",
+      "tags": [
+        "多租户与出站安全"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/application/access/kb_write.go:WithKBTaskWrite",
+      "type": "function",
+      "name": "WithKBTaskWrite",
+      "filePath": "internal/application/access/kb_write.go",
+      "lineRange": [
+        31,
+        45
+      ],
+      "summary": "worker 只能为 tenant 归属匹配的单个 KB 建立写入 grant。",
+      "tags": [
+        "多租户与出站安全"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/utils/security.go:ValidateURLForSSRF",
+      "type": "function",
+      "name": "ValidateURLForSSRF",
+      "filePath": "internal/utils/security.go",
+      "lineRange": [
+        1332,
+        1376
+      ],
+      "summary": "验证目标 URL 与域名/IP 出站策略。",
+      "tags": [
+        "多租户与出站安全"
+      ],
+      "complexity": "complex"
+    },
+    {
+      "id": "function:internal/utils/security.go:SSRFSafeDialContext",
+      "type": "function",
+      "name": "SSRFSafeDialContext",
+      "filePath": "internal/utils/security.go",
+      "lineRange": [
+        862,
+        937
+      ],
+      "summary": "在拨号阶段验证解析后的 IP，防止仅在输入端做 SSRF 校验。",
+      "tags": [
+        "多租户与出站安全"
+      ],
+      "complexity": "complex"
+    }
+  ],
+  "edges": [
+    {
+      "source": "file:frontend/src/main.ts",
+      "target": "function:frontend/src/main.ts:bootstrap",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/router/index.ts",
+      "target": "function:frontend/src/router/index.ts:beforeEach",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/stores/auth.ts",
+      "target": "function:frontend/src/stores/auth.ts:refreshFromAuthMe",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/api/auth/index.ts",
+      "target": "function:frontend/src/api/auth/index.ts:getCurrentUser",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/handler/auth.go",
+      "target": "function:internal/handler/auth.go:GetCurrentUser",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "function:frontend/src/main.ts:bootstrap",
+      "target": "function:frontend/src/stores/auth.ts:refreshFromAuthMe",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:frontend/src/main.ts:bootstrap",
+      "target": "function:frontend/src/router/index.ts:beforeEach",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "function:frontend/src/router/index.ts:beforeEach",
+      "target": "function:frontend/src/stores/auth.ts:refreshFromAuthMe",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:frontend/src/stores/auth.ts:refreshFromAuthMe",
+      "target": "function:frontend/src/api/auth/index.ts:getCurrentUser",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:frontend/src/api/auth/index.ts:getCurrentUser",
+      "target": "endpoint:GET:/api/v1/auth/me",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "endpoint:GET:/api/v1/auth/me",
+      "target": "function:internal/handler/auth.go:GetCurrentUser",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/main.ts",
+      "target": "file:frontend/src/router/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/main.ts",
+      "target": "file:frontend/src/stores/auth.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/router/index.ts",
+      "target": "file:frontend/src/stores/auth.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/stores/auth.ts",
+      "target": "file:frontend/src/api/auth/index.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:frontend/src/api/auth/index.ts",
+      "target": "endpoint:GET:/api/v1/auth/me",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "endpoint:GET:/api/v1/auth/me",
+      "target": "file:internal/handler/auth.go",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/utils/request.ts",
+      "target": "function:frontend/src/utils/request.ts:request.use",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/request.ts",
+      "target": "function:frontend/src/utils/request.ts:response.use",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/authRefresh.ts",
+      "target": "function:frontend/src/utils/authRefresh.ts:refreshAccessTokenShared",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/authRefresh.ts",
+      "target": "function:frontend/src/utils/authRefresh.ts:runStreamWithAuthRetry",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/api/auth/index.ts",
+      "target": "function:frontend/src/api/auth/index.ts:refreshToken",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/handler/auth.go",
+      "target": "function:internal/handler/auth.go:RefreshToken",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/api/auth/index.ts",
+      "target": "file:frontend/src/utils/request.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:frontend/src/api/auth/index.ts:getCurrentUser",
+      "target": "function:frontend/src/utils/request.ts:request.use",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "function:frontend/src/utils/request.ts:response.use",
+      "target": "function:frontend/src/utils/authRefresh.ts:refreshAccessTokenShared",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:frontend/src/utils/authRefresh.ts:refreshAccessTokenShared",
+      "target": "function:frontend/src/api/auth/index.ts:refreshToken",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:frontend/src/api/auth/index.ts:refreshToken",
+      "target": "endpoint:POST:/api/v1/auth/refresh",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "endpoint:POST:/api/v1/auth/refresh",
+      "target": "function:internal/handler/auth.go:RefreshToken",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:frontend/src/utils/authRefresh.ts:runStreamWithAuthRetry",
+      "target": "function:frontend/src/utils/authRefresh.ts:refreshAccessTokenShared",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/utils/request.ts",
+      "target": "file:frontend/src/utils/authRefresh.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/utils/authRefresh.ts",
+      "target": "endpoint:POST:/api/v1/auth/refresh",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/api/chat/streame.ts",
+      "target": "function:frontend/src/api/chat/streame.ts:startStream",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/composables/useChatStreamHandler.ts",
+      "target": "function:frontend/src/composables/useChatStreamHandler.ts:processStreamChunk",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/views/chat/index.vue",
+      "target": "file:frontend/src/api/chat/streame.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:frontend/src/views/chat/index.vue",
+      "target": "file:frontend/src/composables/useChatStreamHandler.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:frontend/src/views/chat/index.vue",
+      "target": "function:frontend/src/api/chat/streame.ts:startStream",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:frontend/src/api/chat/streame.ts:startStream",
+      "target": "function:frontend/src/utils/authRefresh.ts:runStreamWithAuthRetry",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:frontend/src/api/chat/streame.ts:startStream",
+      "target": "endpoint:POST:/api/v1/agent-chat/:session_id",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:frontend/src/api/chat/streame.ts:startStream",
+      "target": "endpoint:GET:/api/v1/sessions/continue-stream/:session_id",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:frontend/src/api/chat/streame.ts:startStream",
+      "target": "function:frontend/src/composables/useChatStreamHandler.ts:processStreamChunk",
+      "type": "publishes",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:frontend/src/api/chat/streame.ts",
+      "target": "endpoint:POST:/api/v1/agent-chat/:session_id",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/api/chat/streame.ts",
+      "target": "endpoint:GET:/api/v1/sessions/continue-stream/:session_id",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/api/chat/streame.ts",
+      "target": "file:frontend/src/utils/authRefresh.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/stores/resourceCache.ts",
+      "target": "function:frontend/src/stores/resourceCache.ts:createCachedResource",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/stores/resourceCache.ts",
+      "target": "function:frontend/src/stores/resourceCache.ts:createKeyedSnapshotCache",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/stores/versionedRequest.ts",
+      "target": "function:frontend/src/stores/versionedRequest.ts:createVersionedRequestCoordinator",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/stores/chatResources.ts",
+      "target": "function:frontend/src/stores/resourceCache.ts:createCachedResource",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/stores/chatResources.ts",
+      "target": "function:frontend/src/stores/resourceCache.ts:createKeyedSnapshotCache",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:frontend/src/stores/resourceCache.ts:createCachedResource",
+      "target": "function:frontend/src/stores/versionedRequest.ts:createVersionedRequestCoordinator",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/stores/auth.ts",
+      "target": "file:frontend/src/stores/chatResources.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:frontend/src/composables/useChatStreamHandler.ts",
+      "target": "file:frontend/src/stores/chatResources.ts",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:frontend/src/stores/chatResources.ts",
+      "target": "file:frontend/src/stores/resourceCache.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/stores/resourceCache.ts",
+      "target": "file:frontend/src/stores/versionedRequest.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/api/knowledge-base/index.ts",
+      "target": "function:frontend/src/api/knowledge-base/index.ts:uploadKnowledgeFile",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/stores/uploadQueue.ts",
+      "target": "function:frontend/src/stores/uploadQueue.ts:createUploadQueue",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/stores/uploadTasks.ts",
+      "target": "file:frontend/src/stores/uploadTasksCore.ts",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/stores/uploadTasksCore.ts",
+      "target": "function:frontend/src/stores/uploadQueue.ts:createUploadQueue",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/stores/uploadTasks.ts",
+      "target": "function:frontend/src/api/knowledge-base/index.ts:uploadKnowledgeFile",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:frontend/src/api/knowledge-base/index.ts:uploadKnowledgeFile",
+      "target": "endpoint:POST:/api/v1/knowledge-bases/:id/knowledge/file",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:frontend/src/stores/uploadQueue.ts:createUploadQueue",
+      "target": "function:frontend/src/api/knowledge-base/index.ts:uploadKnowledgeFile",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:frontend/src/stores/uploadTasksCore.ts",
+      "target": "file:frontend/src/stores/uploadQueue.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/stores/uploadTasks.ts",
+      "target": "file:frontend/src/api/knowledge-base/index.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/api/knowledge-base/index.ts",
+      "target": "endpoint:POST:/api/v1/knowledge-bases/:id/knowledge/file",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/utils/security.ts",
+      "target": "function:frontend/src/utils/security.ts:sanitizeMarkdownHTML",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/utils/security.ts",
+      "target": "function:frontend/src/utils/security.ts:hydrateProtectedFileImages",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:frontend/src/views/chat/components/botmsg.vue",
+      "target": "function:frontend/src/utils/security.ts:sanitizeMarkdownHTML",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:frontend/src/views/chat/components/botmsg.vue",
+      "target": "function:frontend/src/utils/security.ts:hydrateProtectedFileImages",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:frontend/src/utils/security.ts:sanitizeMarkdownHTML",
+      "target": "file:frontend/src/utils/markdownDomPurify.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "function:frontend/src/utils/security.ts:hydrateProtectedFileImages",
+      "target": "file:frontend/src/utils/protectedFileAccess.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:frontend/src/views/chat/components/botmsg.vue",
+      "target": "file:frontend/src/utils/security.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/utils/security.ts",
+      "target": "file:frontend/src/utils/markdownDomPurify.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/utils/security.ts",
+      "target": "file:frontend/src/utils/protectedFileAccess.ts",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:frontend/src/components/document-preview.vue",
+      "target": "file:frontend/src/components/source-preview/PdfSourceViewer.vue",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:frontend/src/components/document-preview.vue",
+      "target": "file:frontend/vite.config.ts",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:frontend/vite.config.ts",
+      "target": "file:frontend/src/embed-main.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:frontend/vite.config.ts",
+      "target": "file:frontend/src/main.ts",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:frontend/src/i18n/localeKeyAudit.ts",
+      "target": "function:frontend/src/i18n/localeKeyAudit.ts:collectI18nUsageFromSources",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "function:frontend/src/i18n/localeKeyAudit.ts:collectI18nUsageFromSources",
+      "target": "file:frontend/src/i18n/localeKeyAudit.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:frontend/src/assets/theme/styleGuard.test.mjs",
+      "target": "file:frontend/vite.config.ts",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:frontend/src/i18n/localeKeyAudit.ts",
+      "target": "file:frontend/src/embed-main.ts",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:frontend/src/i18n/localeKeyAudit.ts",
+      "target": "file:frontend/src/i18n/localeKeyAudit.test.ts",
+      "type": "tested_by",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:frontend/src/assets/theme/styleGuard.test.mjs",
+      "target": "file:frontend/src/i18n/localeKeyAudit.test.ts",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:internal/handler/knowledge.go",
+      "target": "function:internal/handler/knowledge.go:CreateKnowledgeFromFile",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/application/service/knowledge_create.go",
+      "target": "function:internal/application/service/knowledge_create.go:createKnowledgeFromFile",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/application/service/knowledge_process.go",
+      "target": "function:internal/application/service/knowledge_process.go:ProcessDocument",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/application/service/knowledge_process.go",
+      "target": "function:internal/application/service/knowledge_process.go:processChunks",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/infrastructure/chunker/strategy.go",
+      "target": "function:internal/infrastructure/chunker/strategy.go:Split",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/application/service/retriever/keywords_vector_hybrid_indexer.go",
+      "target": "function:internal/application/service/retriever/keywords_vector_hybrid_indexer.go:BatchIndex",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "endpoint:POST:/api/v1/knowledge-bases/:id/knowledge/file",
+      "target": "function:internal/handler/knowledge.go:CreateKnowledgeFromFile",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:internal/handler/knowledge.go:CreateKnowledgeFromFile",
+      "target": "function:internal/application/service/knowledge_create.go:createKnowledgeFromFile",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/application/service/knowledge_create.go:createKnowledgeFromFile",
+      "target": "resource:document:process",
+      "type": "triggers",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/router/task.go",
+      "target": "resource:document:process",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "resource:document:process",
+      "target": "function:internal/application/service/knowledge_process.go:ProcessDocument",
+      "type": "triggers",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:internal/application/service/knowledge_process.go:ProcessDocument",
+      "target": "function:internal/infrastructure/chunker/strategy.go:Split",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/application/service/knowledge_process.go:ProcessDocument",
+      "target": "function:internal/application/service/knowledge_process.go:processChunks",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/application/service/knowledge_process.go:processChunks",
+      "target": "function:internal/application/service/retriever/keywords_vector_hybrid_indexer.go:BatchIndex",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/handler/knowledge.go",
+      "target": "file:internal/application/service/knowledge_create.go",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/application/service/knowledge_create.go",
+      "target": "resource:document:process",
+      "type": "triggers",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/router/task.go",
+      "target": "file:internal/application/service/knowledge_process.go",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/application/service/knowledge_process.go",
+      "target": "file:internal/infrastructure/chunker/strategy.go",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/application/service/knowledge_process.go",
+      "target": "file:internal/application/service/retriever/keywords_vector_hybrid_indexer.go",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/application/service/knowledgebase_search.go",
+      "target": "function:internal/application/service/knowledgebase_search.go:hybridSearchCandidates",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/application/service/knowledgebase_search_fusion.go",
+      "target": "function:internal/application/service/knowledgebase_search_fusion.go:fuseOrDeduplicate",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/application/service/knowledgebase_search_fusion.go",
+      "target": "function:internal/application/service/knowledgebase_search_fusion.go:fuseWithRRF",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/application/service/knowledgebase_search_rerank.go",
+      "target": "function:internal/application/service/knowledgebase_search_rerank.go:HybridSearchWithRerank",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/reranking/rerank.go",
+      "target": "function:internal/reranking/rerank.go:Rerank",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/application/service/knowledgebase_search_rerank.go",
+      "target": "function:internal/application/service/knowledgebase_search_rerank.go:rerankCandidates",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "function:internal/application/service/knowledgebase_search.go:hybridSearchCandidates",
+      "target": "function:internal/application/service/knowledgebase_search_fusion.go:fuseOrDeduplicate",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/application/service/knowledgebase_search_fusion.go:fuseOrDeduplicate",
+      "target": "function:internal/application/service/knowledgebase_search_fusion.go:fuseWithRRF",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/application/service/knowledgebase_search_rerank.go:HybridSearchWithRerank",
+      "target": "function:internal/application/service/knowledgebase_search.go:hybridSearchCandidates",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/application/service/knowledgebase_search_rerank.go:HybridSearchWithRerank",
+      "target": "function:internal/application/service/knowledgebase_search_rerank.go:rerankCandidates",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/application/service/knowledgebase_search_rerank.go:rerankCandidates",
+      "target": "function:internal/reranking/rerank.go:Rerank",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/application/service/knowledgebase_search.go",
+      "target": "file:internal/types/interfaces/retriever.go",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:internal/application/service/knowledgebase_search.go",
+      "target": "file:internal/application/service/knowledgebase_search_fusion.go",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/application/service/knowledgebase_search_rerank.go",
+      "target": "file:internal/application/service/knowledgebase_search.go",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/application/service/knowledgebase_search_rerank.go",
+      "target": "file:internal/reranking/rerank.go",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/application/service/session_agent_qa.go",
+      "target": "function:internal/application/service/session_agent_qa.go:AgentQA",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/agent/engine.go",
+      "target": "function:internal/agent/engine.go:executeLoop",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/agent/act.go",
+      "target": "function:internal/agent/act.go:executeToolCalls",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/agent/act.go",
+      "target": "function:internal/agent/act.go:executeToolCallsParallel",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "function:internal/application/service/session_agent_qa.go:AgentQA",
+      "target": "function:internal/agent/engine.go:executeLoop",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/agent/engine.go:executeLoop",
+      "target": "function:internal/agent/act.go:executeToolCalls",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/agent/act.go:executeToolCalls",
+      "target": "function:internal/agent/act.go:executeToolCallsParallel",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/agent/act.go:executeToolCallsParallel",
+      "target": "file:internal/agent/tools/execution_policy.go",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:internal/application/service/session_agent_qa.go",
+      "target": "file:internal/agent/engine.go",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/agent/engine.go",
+      "target": "file:internal/agent/act.go",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/agent/act.go",
+      "target": "file:internal/agent/tools/execution_policy.go",
+      "type": "imports",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/handler/session/qa.go",
+      "target": "function:internal/handler/session/qa.go:setupSSEStream",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/handler/session/qa.go",
+      "target": "function:internal/handler/session/qa.go:completeStreamAssistantMessage",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/handler/session/agent_stream_handler.go",
+      "target": "function:internal/handler/session/agent_stream_handler.go:publishCompletion",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/stream/redis_manager.go",
+      "target": "function:internal/stream/redis_manager.go:AppendEvent",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/stream/redis_manager.go",
+      "target": "function:internal/stream/redis_manager.go:GetEvents",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/handler/session/stream.go",
+      "target": "function:internal/handler/session/stream.go:ContinueStream",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "endpoint:POST:/api/v1/agent-chat/:session_id",
+      "target": "file:internal/handler/session/qa.go",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/handler/session/qa.go",
+      "target": "function:internal/application/service/session_agent_qa.go:AgentQA",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/handler/session/qa.go",
+      "target": "function:internal/handler/session/qa.go:setupSSEStream",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/handler/session/qa.go",
+      "target": "function:internal/handler/session/qa.go:completeStreamAssistantMessage",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/handler/session/agent_stream_handler.go",
+      "target": "function:internal/stream/redis_manager.go:AppendEvent",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/handler/session/qa.go:completeStreamAssistantMessage",
+      "target": "function:internal/handler/session/agent_stream_handler.go:publishCompletion",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/handler/session/agent_stream_handler.go:publishCompletion",
+      "target": "function:internal/stream/redis_manager.go:AppendEvent",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "endpoint:GET:/api/v1/sessions/continue-stream/:session_id",
+      "target": "function:internal/handler/session/stream.go:ContinueStream",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:internal/handler/session/stream.go:ContinueStream",
+      "target": "function:internal/stream/redis_manager.go:GetEvents",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/handler/session/qa.go",
+      "target": "file:internal/handler/session/agent_stream_handler.go",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/handler/session/agent_stream_handler.go",
+      "target": "file:internal/stream/redis_manager.go",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/handler/session/stream.go",
+      "target": "file:internal/stream/redis_manager.go",
+      "type": "reads_from",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:internal/application/service/datasource_service.go",
+      "target": "function:internal/application/service/datasource_service.go:ProcessSync",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/application/service/datasource_service.go",
+      "target": "function:internal/application/service/datasource_service.go:processSyncStreaming",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/application/service/datasource_service.go",
+      "target": "function:internal/application/service/datasource_service.go:Emit",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/application/service/datasource_service.go",
+      "target": "function:internal/application/service/datasource_service.go:Checkpoint",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/application/service/datasource_service.go",
+      "target": "function:internal/application/service/datasource_service.go:applyFetchedItem",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/application/service/datasource_service.go",
+      "target": "function:internal/application/service/datasource_service.go:ingestItem",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/router/task.go",
+      "target": "resource:datasource:sync",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "resource:datasource:sync",
+      "target": "function:internal/application/service/datasource_service.go:ProcessSync",
+      "type": "triggers",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:internal/application/service/datasource_service.go:ProcessSync",
+      "target": "function:internal/application/service/datasource_service.go:processSyncStreaming",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/application/service/datasource_service.go:processSyncStreaming",
+      "target": "file:internal/datasource/connector.go",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:internal/datasource/connector.go",
+      "target": "function:internal/application/service/datasource_service.go:Emit",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/datasource/connector.go",
+      "target": "function:internal/application/service/datasource_service.go:Checkpoint",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/application/service/datasource_service.go:Emit",
+      "target": "function:internal/application/service/datasource_service.go:applyFetchedItem",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/application/service/datasource_service.go:applyFetchedItem",
+      "target": "function:internal/application/service/datasource_service.go:ingestItem",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/application/service/datasource_service.go:ingestItem",
+      "target": "function:internal/application/service/knowledge_create.go:createKnowledgeFromFile",
+      "type": "triggers",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:internal/application/service/datasource_service.go:Emit",
+      "target": "function:internal/application/service/datasource_service.go:Checkpoint",
+      "type": "triggers",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/application/service/datasource_service.go",
+      "target": "file:internal/datasource/connector.go",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:internal/application/service/datasource_service.go",
+      "target": "resource:datasource:sync",
+      "type": "triggers",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/router/task.go",
+      "target": "pipeline:有界队列与隔离 worker",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:internal/types/task.go",
+      "target": "pipeline:有界队列与隔离 worker",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "pipeline:有界队列与隔离 worker",
+      "target": "resource:document:process",
+      "type": "triggers",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "pipeline:有界队列与隔离 worker",
+      "target": "resource:datasource:sync",
+      "type": "triggers",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "file:internal/middleware/api_key_gate.go",
+      "target": "function:internal/middleware/api_key_gate.go:authorize",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/router/routes_knowledge.go",
+      "target": "function:internal/router/routes_knowledge.go:RegisterKnowledgeRoutes",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/router/rbac.go",
+      "target": "function:internal/router/rbac.go:KBAccessWrite",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/middleware/kb_access.go",
+      "target": "function:internal/middleware/kb_access.go:RequireKBAccess",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/application/access/kb_write.go",
+      "target": "function:internal/application/access/kb_write.go:RequireKBWrite",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/application/service/knowledgebase_access.go",
+      "target": "function:internal/application/service/knowledgebase_access.go:requireKBWrite",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/application/access/kb_write.go",
+      "target": "function:internal/application/access/kb_write.go:WithKBTaskWrite",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/utils/security.go",
+      "target": "function:internal/utils/security.go:ValidateURLForSSRF",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "file:internal/utils/security.go",
+      "target": "function:internal/utils/security.go:SSRFSafeDialContext",
+      "type": "contains",
+      "direction": "forward",
+      "weight": 1
+    },
+    {
+      "source": "endpoint:POST:/api/v1/knowledge-bases/:id/knowledge/file",
+      "target": "function:internal/router/routes_knowledge.go:RegisterKnowledgeRoutes",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:internal/router/routes_knowledge.go:RegisterKnowledgeRoutes",
+      "target": "function:internal/handler/knowledge.go:CreateKnowledgeFromFile",
+      "type": "routes",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:internal/router/routes_knowledge.go:RegisterKnowledgeRoutes",
+      "target": "function:internal/middleware/api_key_gate.go:authorize",
+      "type": "validates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:internal/router/routes_knowledge.go:RegisterKnowledgeRoutes",
+      "target": "function:internal/router/rbac.go:KBAccessWrite",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/router/rbac.go:KBAccessWrite",
+      "target": "function:internal/middleware/kb_access.go:RequireKBAccess",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/middleware/kb_access.go:RequireKBAccess",
+      "target": "function:internal/handler/knowledge.go:CreateKnowledgeFromFile",
+      "type": "validates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:internal/application/service/knowledgebase_access.go:requireKBWrite",
+      "target": "function:internal/application/access/kb_write.go:RequireKBWrite",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/handler/knowledge.go:CreateKnowledgeFromFile",
+      "target": "function:internal/application/access/kb_write.go:RequireKBWrite",
+      "type": "validates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:internal/application/service/knowledge_process.go:ProcessDocument",
+      "target": "function:internal/application/access/kb_write.go:WithKBTaskWrite",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/application/service/datasource_service.go:ProcessSync",
+      "target": "function:internal/application/access/kb_write.go:WithKBTaskWrite",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "function:internal/application/service/knowledgebase_search.go:hybridSearchCandidates",
+      "target": "file:internal/application/service/knowledgebase_access.go",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "function:internal/application/service/knowledge_process.go:ProcessDocument",
+      "target": "function:internal/utils/security.go:ValidateURLForSSRF",
+      "type": "validates",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:internal/utils/security.go:ValidateURLForSSRF",
+      "target": "function:internal/utils/security.go:SSRFSafeDialContext",
+      "type": "depends_on",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:internal/router/routes_knowledge.go",
+      "target": "file:internal/middleware/api_key_gate.go",
+      "type": "configures",
+      "direction": "forward",
+      "weight": 0.6
+    },
+    {
+      "source": "file:internal/router/routes_knowledge.go",
+      "target": "file:internal/router/rbac.go",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/router/rbac.go",
+      "target": "file:internal/middleware/kb_access.go",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/middleware/kb_access.go",
+      "target": "file:internal/application/access/kb_write.go",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:internal/application/service/knowledgebase_access.go",
+      "target": "file:internal/application/access/kb_write.go",
+      "type": "calls",
+      "direction": "forward",
+      "weight": 0.8
+    },
+    {
+      "source": "file:internal/utils/security.go",
+      "target": "file:internal/middleware/api_key_gate.go",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "file:frontend/src/utils/request.ts",
+      "target": "file:frontend/src/api/chat/streame.ts",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "endpoint:POST:/api/v1/knowledge-bases/:id/knowledge/file",
+      "target": "file:internal/application/service/knowledge_create.go",
+      "type": "triggers",
+      "direction": "forward",
+      "weight": 0.7
+    },
+    {
+      "source": "function:internal/application/service/retriever/keywords_vector_hybrid_indexer.go:BatchIndex",
+      "target": "file:internal/application/service/knowledgebase_search.go",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "function:internal/application/service/knowledgebase_search_rerank.go:HybridSearchWithRerank",
+      "target": "file:internal/application/service/session_agent_qa.go",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "function:internal/agent/engine.go:executeLoop",
+      "target": "file:internal/handler/session/agent_stream_handler.go",
+      "type": "publishes",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "function:internal/stream/redis_manager.go:AppendEvent",
+      "target": "function:internal/stream/redis_manager.go:GetEvents",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "function:frontend/src/api/chat/streame.ts:startStream",
+      "target": "function:internal/handler/session/stream.go:ContinueStream",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    },
+    {
+      "source": "function:internal/application/service/datasource_service.go:Checkpoint",
+      "target": "resource:datasource:sync",
+      "type": "related",
+      "direction": "forward",
+      "weight": 0.5
+    }
+  ],
+  "layers": [
+    {
+      "id": "layer:frontend-auth",
+      "name": "01 前端 · 启动与认证",
+      "description": "Pinia 身份源、异步首屏守卫与多租户会话恢复。",
+      "nodeIds": [
+        "file:frontend/src/main.ts",
+        "file:frontend/src/router/index.ts",
+        "file:frontend/src/stores/auth.ts",
+        "file:frontend/src/api/auth/index.ts",
+        "endpoint:GET:/api/v1/auth/me",
+        "file:internal/handler/auth.go",
+        "function:frontend/src/main.ts:bootstrap",
+        "function:frontend/src/router/index.ts:beforeEach",
+        "function:frontend/src/stores/auth.ts:refreshFromAuthMe",
+        "function:frontend/src/api/auth/index.ts:getCurrentUser",
+        "function:internal/handler/auth.go:GetCurrentUser"
+      ]
+    },
+    {
+      "id": "layer:frontend-token",
+      "name": "02 前端 · 共享鉴权刷新",
+      "description": "Axios 与 fetch-event-source 是独立传输，只有刷新协调器共享。",
+      "nodeIds": [
+        "file:frontend/src/utils/request.ts",
+        "file:frontend/src/utils/authRefresh.ts",
+        "endpoint:POST:/api/v1/auth/refresh",
+        "function:frontend/src/api/auth/index.ts:refreshToken",
+        "function:internal/handler/auth.go:RefreshToken",
+        "function:frontend/src/utils/request.ts:request.use",
+        "function:frontend/src/utils/request.ts:response.use",
+        "function:frontend/src/utils/authRefresh.ts:refreshAccessTokenShared",
+        "function:frontend/src/utils/authRefresh.ts:runStreamWithAuthRetry"
+      ]
+    },
+    {
+      "id": "layer:frontend-chat",
+      "name": "03 前端 · 流式聊天",
+      "description": "发送、流传输、事件归并和断线续传形成独立链路。",
+      "nodeIds": [
+        "file:frontend/src/views/chat/index.vue",
+        "file:frontend/src/api/chat/streame.ts",
+        "file:frontend/src/composables/useChatStreamHandler.ts",
+        "endpoint:POST:/api/v1/agent-chat/:session_id",
+        "endpoint:GET:/api/v1/sessions/continue-stream/:session_id",
+        "function:frontend/src/api/chat/streame.ts:startStream",
+        "function:frontend/src/composables/useChatStreamHandler.ts:processStreamChunk"
+      ]
+    },
+    {
+      "id": "layer:frontend-cache",
+      "name": "04 前端 · 异步竞态与缓存",
+      "description": "缓存新鲜度由明确的失效和代际约束保证，不依赖简单 TTL。",
+      "nodeIds": [
+        "file:frontend/src/stores/chatResources.ts",
+        "file:frontend/src/stores/resourceCache.ts",
+        "file:frontend/src/stores/versionedRequest.ts",
+        "function:frontend/src/stores/resourceCache.ts:createCachedResource",
+        "function:frontend/src/stores/resourceCache.ts:createKeyedSnapshotCache",
+        "function:frontend/src/stores/versionedRequest.ts:createVersionedRequestCoordinator"
+      ]
+    },
+    {
+      "id": "layer:frontend-upload",
+      "name": "05 前端 · 上传任务调度",
+      "description": "文件传输与后端解析状态分开，支持并发上限、取消和重试。",
+      "nodeIds": [
+        "file:frontend/src/stores/uploadTasks.ts",
+        "file:frontend/src/stores/uploadTasksCore.ts",
+        "file:frontend/src/stores/uploadQueue.ts",
+        "file:frontend/src/api/knowledge-base/index.ts",
+        "endpoint:POST:/api/v1/knowledge-bases/:id/knowledge/file",
+        "function:frontend/src/api/knowledge-base/index.ts:uploadKnowledgeFile",
+        "function:frontend/src/stores/uploadQueue.ts:createUploadQueue"
+      ]
+    },
+    {
+      "id": "layer:frontend-safe-content",
+      "name": "06 前端 · 内容安全",
+      "description": "不可信模型输出与受保护图片分别处理，消毒与资源水合是两步。",
+      "nodeIds": [
+        "file:frontend/src/views/chat/components/botmsg.vue",
+        "file:frontend/src/utils/security.ts",
+        "file:frontend/src/utils/markdownDomPurify.ts",
+        "file:frontend/src/utils/protectedFileAccess.ts",
+        "function:frontend/src/utils/security.ts:sanitizeMarkdownHTML",
+        "function:frontend/src/utils/security.ts:hydrateProtectedFileImages"
+      ]
+    },
+    {
+      "id": "layer:frontend-build",
+      "name": "07 前端 · 文档预览与构建",
+      "description": "格式渲染隔离与双入口按需加载减少首屏负担。",
+      "nodeIds": [
+        "file:frontend/src/components/document-preview.vue",
+        "file:frontend/src/components/source-preview/PdfSourceViewer.vue",
+        "file:frontend/vite.config.ts",
+        "file:frontend/src/embed-main.ts"
+      ]
+    },
+    {
+      "id": "layer:frontend-quality",
+      "name": "08 前端 · 国际化与质量门禁",
+      "description": "源码键审计和样式技术债棘轮，把回归变为自动化检查。",
+      "nodeIds": [
+        "file:frontend/src/i18n/localeKeyAudit.ts",
+        "file:frontend/src/i18n/localeKeyAudit.test.ts",
+        "file:frontend/src/assets/theme/styleGuard.test.mjs",
+        "function:frontend/src/i18n/localeKeyAudit.ts:collectI18nUsageFromSources"
+      ]
+    },
+    {
+      "id": "layer:backend-ingestion",
+      "name": "09 后端 · 文档入库",
+      "description": "文件存储、数据库、Asynq、解析/分块和索引的状态边界。",
+      "nodeIds": [
+        "file:internal/handler/knowledge.go",
+        "file:internal/application/service/knowledge_create.go",
+        "file:internal/router/task.go",
+        "file:internal/application/service/knowledge_process.go",
+        "file:internal/infrastructure/chunker/strategy.go",
+        "file:internal/application/service/retriever/keywords_vector_hybrid_indexer.go",
+        "resource:document:process",
+        "function:internal/handler/knowledge.go:CreateKnowledgeFromFile",
+        "function:internal/application/service/knowledge_create.go:createKnowledgeFromFile",
+        "function:internal/application/service/knowledge_process.go:ProcessDocument",
+        "function:internal/application/service/knowledge_process.go:processChunks",
+        "function:internal/infrastructure/chunker/strategy.go:Split",
+        "function:internal/application/service/retriever/keywords_vector_hybrid_indexer.go:BatchIndex"
+      ]
+    },
+    {
+      "id": "layer:backend-retrieval",
+      "name": "10 后端 · 混合检索与重排",
+      "description": "先授权与异构检索归一，再融合；rerank 是显式独立阶段。",
+      "nodeIds": [
+        "file:internal/application/service/knowledgebase_search.go",
+        "file:internal/application/service/knowledgebase_search_fusion.go",
+        "file:internal/application/service/knowledgebase_search_rerank.go",
+        "file:internal/reranking/rerank.go",
+        "file:internal/types/interfaces/retriever.go",
+        "function:internal/application/service/knowledgebase_search.go:hybridSearchCandidates",
+        "function:internal/application/service/knowledgebase_search_fusion.go:fuseOrDeduplicate",
+        "function:internal/application/service/knowledgebase_search_fusion.go:fuseWithRRF",
+        "function:internal/application/service/knowledgebase_search_rerank.go:HybridSearchWithRerank",
+        "function:internal/reranking/rerank.go:Rerank",
+        "function:internal/application/service/knowledgebase_search_rerank.go:rerankCandidates"
+      ]
+    },
+    {
+      "id": "layer:backend-agent",
+      "name": "11 后端 · Agent 执行",
+      "description": "ReAct 会话恢复、执行预算、工具安全和顺序屏障。",
+      "nodeIds": [
+        "file:internal/application/service/session_agent_qa.go",
+        "file:internal/agent/engine.go",
+        "file:internal/agent/act.go",
+        "file:internal/agent/tools/execution_policy.go",
+        "function:internal/application/service/session_agent_qa.go:AgentQA",
+        "function:internal/agent/engine.go:executeLoop",
+        "function:internal/agent/act.go:executeToolCalls",
+        "function:internal/agent/act.go:executeToolCallsParallel"
+      ]
+    },
+    {
+      "id": "layer:backend-stream",
+      "name": "12 后端 · 流式续传与一致性",
+      "description": "生成生命周期、HTTP SSE、Redis 回放与消息持久化分别承担不同责任。",
+      "nodeIds": [
+        "file:internal/handler/session/qa.go",
+        "file:internal/handler/session/agent_stream_handler.go",
+        "file:internal/stream/redis_manager.go",
+        "file:internal/handler/session/stream.go",
+        "function:internal/handler/session/qa.go:setupSSEStream",
+        "function:internal/handler/session/qa.go:completeStreamAssistantMessage",
+        "function:internal/handler/session/agent_stream_handler.go:publishCompletion",
+        "function:internal/stream/redis_manager.go:AppendEvent",
+        "function:internal/stream/redis_manager.go:GetEvents",
+        "function:internal/handler/session/stream.go:ContinueStream"
+      ]
+    },
+    {
+      "id": "layer:backend-connectors",
+      "name": "13 后端 · 数据源同步",
+      "description": "外部连接器协议、逐项处理与可恢复 checkpoint。",
+      "nodeIds": [
+        "file:internal/application/service/datasource_service.go",
+        "file:internal/datasource/connector.go",
+        "resource:datasource:sync",
+        "function:internal/application/service/datasource_service.go:ProcessSync",
+        "function:internal/application/service/datasource_service.go:processSyncStreaming",
+        "function:internal/application/service/datasource_service.go:Emit",
+        "function:internal/application/service/datasource_service.go:Checkpoint",
+        "function:internal/application/service/datasource_service.go:applyFetchedItem",
+        "function:internal/application/service/datasource_service.go:ingestItem"
+      ]
+    },
+    {
+      "id": "layer:backend-workers",
+      "name": "14 后端 · 后台任务隔离",
+      "description": "按负载类型划分 Asynq worker pool，并通过共享池弹性借用空闲容量。",
+      "nodeIds": [
+        "file:internal/types/task.go",
+        "pipeline:有界队列与隔离 worker"
+      ]
+    },
+    {
+      "id": "layer:backend-security",
+      "name": "15 后端 · 多租户与出站安全",
+      "description": "请求入口、领域操作、后台任务与出站网络分别验证权限。",
+      "nodeIds": [
+        "file:internal/router/routes_knowledge.go",
+        "file:internal/router/rbac.go",
+        "file:internal/middleware/kb_access.go",
+        "file:internal/middleware/api_key_gate.go",
+        "file:internal/application/access/kb_write.go",
+        "file:internal/application/service/knowledgebase_access.go",
+        "file:internal/utils/security.go",
+        "function:internal/middleware/api_key_gate.go:authorize",
+        "function:internal/router/routes_knowledge.go:RegisterKnowledgeRoutes",
+        "function:internal/router/rbac.go:KBAccessWrite",
+        "function:internal/middleware/kb_access.go:RequireKBAccess",
+        "function:internal/application/access/kb_write.go:RequireKBWrite",
+        "function:internal/application/service/knowledgebase_access.go:requireKBWrite",
+        "function:internal/application/access/kb_write.go:WithKBTaskWrite",
+        "function:internal/utils/security.go:ValidateURLForSSRF",
+        "function:internal/utils/security.go:SSRFSafeDialContext"
+      ]
+    }
+  ],
+  "tour": [
+    {
+      "order": 1,
+      "title": "01 前端 · 启动与认证",
+      "description": "从 bootstrap 的等待顺序读到路由校准，再沿 /auth/me 回到 Auth Store。注意路由权限不是后端权限。",
+      "nodeIds": [
+        "file:frontend/src/main.ts",
+        "file:frontend/src/router/index.ts",
+        "file:frontend/src/stores/auth.ts",
+        "file:frontend/src/api/auth/index.ts",
+        "endpoint:GET:/api/v1/auth/me",
+        "file:internal/handler/auth.go"
+      ],
+      "languageLesson": "学习首屏一致性、异步请求代际和身份状态单一事实源。"
+    },
+    {
+      "order": 2,
+      "title": "02 前端 · 共享鉴权刷新",
+      "description": "先看两类 401 处理：Axios 响应拦截器与 SSE 重试都汇入共享刷新队列，不能画成 SSE 经过 Axios。",
+      "nodeIds": [
+        "file:frontend/src/utils/request.ts",
+        "file:frontend/src/utils/authRefresh.ts",
+        "endpoint:POST:/api/v1/auth/refresh",
+        "function:frontend/src/api/auth/index.ts:refreshToken",
+        "function:internal/handler/auth.go:RefreshToken"
+      ],
+      "languageLesson": "练习 single-flight、令牌轮换和过期请求淘汰。"
+    },
+    {
+      "order": 3,
+      "title": "03 前端 · 流式聊天",
+      "description": "从聊天页的 startStream / onChunk 绑定入手，追到 SSE 重连，再看处理器如何将事件更新为消息。",
+      "nodeIds": [
+        "file:frontend/src/views/chat/index.vue",
+        "file:frontend/src/api/chat/streame.ts",
+        "file:frontend/src/composables/useChatStreamHandler.ts",
+        "endpoint:POST:/api/v1/agent-chat/:session_id",
+        "endpoint:GET:/api/v1/sessions/continue-stream/:session_id"
+      ],
+      "languageLesson": "重点看取消时旧流失效、服务端续传与消息增量归并。"
+    },
+    {
+      "order": 4,
+      "title": "04 前端 · 异步竞态与缓存",
+      "description": "读资源实例化、协调器和 Pinia 登出清理，理解为什么 await ensure 后不会读到旧结果。",
+      "nodeIds": [
+        "file:frontend/src/stores/chatResources.ts",
+        "file:frontend/src/stores/resourceCache.ts",
+        "file:frontend/src/stores/versionedRequest.ts"
+      ],
+      "languageLesson": "练习 single-flight、force 请求排队与 stale response 丢弃。"
+    },
+    {
+      "order": 5,
+      "title": "05 前端 · 上传任务调度",
+      "description": "从上传 Store 的 API 注入开始，跟踪队列启动、传输完成和后续解析状态轮询。",
+      "nodeIds": [
+        "file:frontend/src/stores/uploadTasks.ts",
+        "file:frontend/src/stores/uploadTasksCore.ts",
+        "file:frontend/src/stores/uploadQueue.ts",
+        "file:frontend/src/api/knowledge-base/index.ts",
+        "endpoint:POST:/api/v1/knowledge-bases/:id/knowledge/file"
+      ],
+      "languageLesson": "练习任务状态机、AbortController、资源隔离与可测试的依赖注入。"
+    },
+    {
+      "order": 6,
+      "title": "06 前端 · 内容安全",
+      "description": "从 botmsg 的渲染入口追到 DOMPurify hooks、URL 白名单，再看图片访问如何维持鉴权。",
+      "nodeIds": [
+        "file:frontend/src/views/chat/components/botmsg.vue",
+        "file:frontend/src/utils/security.ts",
+        "file:frontend/src/utils/markdownDomPurify.ts",
+        "file:frontend/src/utils/protectedFileAccess.ts"
+      ],
+      "languageLesson": "区分 Markdown 转 HTML 和真正执行 XSS 消毒的边界。"
+    },
+    {
+      "order": 7,
+      "title": "07 前端 · 文档预览与构建",
+      "description": "先看预览器如何动态加载多格式解析器，再看 Vite 如何拆离 Embed 与图形/Markdown 重依赖。",
+      "nodeIds": [
+        "file:frontend/src/components/document-preview.vue",
+        "file:frontend/src/components/source-preview/PdfSourceViewer.vue",
+        "file:frontend/vite.config.ts",
+        "file:frontend/src/embed-main.ts"
+      ],
+      "languageLesson": "学习动态 import、插件资源拷贝、预加载与跨运行时依赖去重。"
+    },
+    {
+      "order": 8,
+      "title": "08 前端 · 国际化与质量门禁",
+      "description": "读 i18n 静态分析与动态键前缀，再看样式 guard 如何只允许债务计数下降。",
+      "nodeIds": [
+        "file:frontend/src/i18n/localeKeyAudit.ts",
+        "file:frontend/src/i18n/localeKeyAudit.test.ts",
+        "file:frontend/src/assets/theme/styleGuard.test.mjs"
+      ],
+      "languageLesson": "学习把跨页面约束变成测试，而非全靠人工检查。"
+    },
+    {
+      "order": 9,
+      "title": "09 后端 · 文档入库",
+      "description": "沿上传入口走到 pending 状态与异步任务，再看后台如何先存分块、后批量计算 embedding。",
+      "nodeIds": [
+        "file:internal/handler/knowledge.go",
+        "file:internal/application/service/knowledge_create.go",
+        "file:internal/router/task.go",
+        "file:internal/application/service/knowledge_process.go",
+        "file:internal/infrastructure/chunker/strategy.go",
+        "file:internal/application/service/retriever/keywords_vector_hybrid_indexer.go",
+        "resource:document:process"
+      ],
+      "languageLesson": "重点理解跨系统一致性、幂等任务、父子分块和窗口化批量索引。"
+    },
+    {
+      "order": 10,
+      "title": "10 后端 · 混合检索与重排",
+      "description": "从 HybridSearchWithRerank 看候选池、逐 KB 授权、向量/BM25 融合到模型重排与降级。",
+      "nodeIds": [
+        "file:internal/application/service/knowledgebase_search.go",
+        "file:internal/application/service/knowledgebase_search_fusion.go",
+        "file:internal/application/service/knowledgebase_search_rerank.go",
+        "file:internal/reranking/rerank.go",
+        "file:internal/types/interfaces/retriever.go"
+      ],
+      "languageLesson": "分清 RRF 排名融合、rerank 相关性评分与 MMR 多样性。"
+    },
+    {
+      "order": 11,
+      "title": "11 后端 · Agent 执行",
+      "description": "沿 AgentQA 到循环和 executeToolCallsParallel，看模型产出的工具调用如何在服务端被约束。",
+      "nodeIds": [
+        "file:internal/application/service/session_agent_qa.go",
+        "file:internal/agent/engine.go",
+        "file:internal/agent/act.go",
+        "file:internal/agent/tools/execution_policy.go"
+      ],
+      "languageLesson": "学会区分模型给出的意图和应用批准执行的实际副作用。"
+    },
+    {
+      "order": 12,
+      "title": "12 后端 · 流式续传与一致性",
+      "description": "沿 agent-chat 和 continue-stream 两条 API 看后台执行、事件存储和落库后 complete 的顺序。",
+      "nodeIds": [
+        "file:internal/handler/session/qa.go",
+        "file:internal/handler/session/agent_stream_handler.go",
+        "file:internal/stream/redis_manager.go",
+        "file:internal/handler/session/stream.go"
+      ],
+      "languageLesson": "重点理解断线不是停止、offset 回放、租约管理与可见完成事件。"
+    },
+    {
+      "order": 13,
+      "title": "13 后端 · 数据源同步",
+      "description": "跟踪一个外部资源经过 Emit 入库再到 Checkpoint：失败时不能提前提交游标。",
+      "nodeIds": [
+        "file:internal/application/service/datasource_service.go",
+        "file:internal/datasource/connector.go",
+        "resource:datasource:sync"
+      ],
+      "languageLesson": "学习长任务的幂等游标、内存上界、分页与外部系统错误处理。"
+    },
+    {
+      "order": 14,
+      "title": "14 后端 · 后台任务隔离",
+      "description": "从 task.go 的各 worker pool 和队列映射读起，比较长时间解析与轻量后处理的资源需求。",
+      "nodeIds": [
+        "file:internal/types/task.go",
+        "pipeline:有界队列与隔离 worker"
+      ],
+      "languageLesson": "学习有界并发、优先级隔离和吞吐/尾延迟权衡。"
+    },
+    {
+      "order": 15,
+      "title": "15 后端 · 多租户与出站安全",
+      "description": "从 API Key 默认拒绝与 KB 写入 grant 开始，最后追到重定向及拨号阶段的 SSRF 防护。",
+      "nodeIds": [
+        "file:internal/router/routes_knowledge.go",
+        "file:internal/router/rbac.go",
+        "file:internal/middleware/kb_access.go",
+        "file:internal/middleware/api_key_gate.go",
+        "file:internal/application/access/kb_write.go",
+        "file:internal/application/service/knowledgebase_access.go",
+        "file:internal/utils/security.go"
+      ],
+      "languageLesson": "重点看跨租户共享时读取权限并不意味着写权限，后台任务也必须再次校验绑定。"
+    }
+  ]
+}

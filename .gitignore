@@ -4,6 +4,13 @@
 !.env.example
 !.gitignore
 !.github/
+# Curated full-stack learning graph; other generated analysis data stays ignored.
+!/.ua/
+/.ua/*
+!/.ua/knowledge-graph.json
+!/.ua/config.json
+!/.ua/build-learning-graph.mjs
+!/.ua/validate-learning-graph.mjs
 
 # 敏感文件
 *.pem
