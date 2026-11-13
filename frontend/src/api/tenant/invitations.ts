@@ -187,10 +187,10 @@ export async function listMyInvitations(
 }
 
 /**
- * Lightweight pending-count endpoint used by the avatar-row badge
- * poller. Separate from the list endpoint so polling doesn't transfer
- * the full payload every cycle.
- * Backend: GET /api/v1/me/invitations/pending-count (authenticated).
+ * 轻量级的"待处理数量"接口，供头像那一行的角标轮询器使用。
+ * 故意与"邀请列表"接口分开，这样每轮轮询就不必传输完整的数据。
+ * 
+ * 后端路由：GET /api/v1/me/invitations/pending-count，需要登录认证。
  */
 export async function getMyPendingInvitationCount(): Promise<PendingCountResponse> {
   return (await get(
@@ -225,8 +225,11 @@ export async function acceptInvitationByToken(
 }
 
 /**
- * Decline one of MY pending invitations.
- * Backend: POST /api/v1/me/invitations/:inv_id/decline (authenticated).
+ * 删除某一个邀请我的链接
+ * 后端：POST /api/v1/me/invitations/:inv_id/decline (authenticated).
+ * 
+ * @param invId 要删除的邀请链接 id
+ * @returns 返回 Promise 对象，发送删除请求
  */
 export async function declineInvitation(invId: number): Promise<SimpleResponse> {
   return (await post(
@@ -255,6 +258,19 @@ export interface CreateInviteLinkResponse {
  * as a per-user invitation.
  *
  * Backend: POST /api/v1/tenants/:id/invite-links (Owner+).
+ */
+
+/**
+ * 为指定空间生成一个可多次使用的分享链接式邀请。
+ * 返回的记录会带上 invite_url（由数据库中持久化的明文 token 拼接而成），
+ * 前端 SPA 会把它复制到剪贴板。该链接在过期或被撤销之前一直有效；撤销它时，
+ * 调用的是与"按用户邀请"相同的 DELETE 接口。
+ *
+ * 后端：POST /api/v1/tenants/:id/invite-links（要求 Owner 及以上角色）。
+ * 
+ * @param tenantId 目标空间 id
+ * @param body 含这次邀请的配置，包含 role 被邀请者加入后的角色，message? 可选配置，其他留言
+ * @returns Promise<CreateInviteLinkResponse>，创建结果；成功时 data 为邀请记录，含 invite_url 供复制
  */
 export async function createInviteLink(
   tenantId: number,

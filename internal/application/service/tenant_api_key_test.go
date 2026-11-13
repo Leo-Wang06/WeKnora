@@ -54,6 +54,11 @@ func (r *fakeTenantAPIKeyRepo) CreateAPIKey(_ context.Context, key *types.Tenant
 	return nil
 }
 
+// GetAPIKeyByHash 是生产仓储的测试替身：在内存 map 中按 key_hash 查找，
+// 不存在时返回 ErrTenantAPIKeyNotFound（与生产实现一致）。
+//
+// 返回结构体副本而不是 map 中的原指针，模拟数据库"每次查询返回独立记录"
+// 的行为，避免某个测试修改字段后污染其它测试。
 func (r *fakeTenantAPIKeyRepo) GetAPIKeyByHash(_ context.Context, hash string) (*types.TenantAPIKey, error) {
 	key, ok := r.byHash[hash]
 	if !ok {

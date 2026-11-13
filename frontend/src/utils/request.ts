@@ -41,6 +41,15 @@ const HTTP_STATUS_KEY = '$httpStatus';
  * in place and return it. Primitives pass through untouched.
  * See {@link WithStatus} for where the property is guaranteed.
  */
+/**
+ * 在响应数据对象上原地附加不可枚举的 $httpStatus 属性，并返回该对象。
+ * 原始值（primitive）原样返回，不做处理。
+ * 关于这个属性在哪些情况下保证存在，参见 {@link WithStatus}。
+ * 
+ * @param data 目标对象
+ * @param status 响应状态值
+ * @returns 
+ */
 function withHttpStatus<T>(data: T, status: number): T {
   if (data !== null && typeof data === 'object') {
     Object.defineProperty(data, HTTP_STATUS_KEY, {
@@ -68,7 +77,9 @@ export function getCurrentLanguage(): string {
   return i18n.global.locale?.value || localStorage.getItem('locale') || 'zh-CN'
 }
 
-
+/**
+ * 请求拦截器
+ */
 instance.interceptors.request.use(
   (config) => {
     const existingAuth = config.headers?.Authorization ?? config.headers?.authorization;
@@ -76,6 +87,7 @@ instance.interceptors.request.use(
     const isEmbedPath = typeof config.url === 'string' && config.url.includes('/api/v1/embed/');
 
     // 嵌入渠道使用 Embed token；勿用本地 JWT 覆盖（否则调试页会 401）
+    // 所以有 isEmbedAuth 保护，只有设计好的头不是 Embed token 时，才会给 token 头设置为 Bearer
     if (!isEmbedAuth) {
       const token = localStorage.getItem('weknora_token');
       if (token) {
@@ -102,6 +114,7 @@ instance.interceptors.request.use(
       }
     }
     
+    // 给每次请求设置一个请求 ID， X-Request-ID 是一个请求追踪标识——每次请求生成一个随机字符串，用于把"前端这次请求"和"后端这串日志"串起来。
     config.headers["X-Request-ID"] = `${generateRandomString(12)}`;
     return config;
   },
@@ -117,6 +130,12 @@ instance.interceptors.request.use(
 // covers '/auth/register-by-invite' via substring match.
 const PUBLIC_AUTH_PATHS = ['/auth/auto-setup', '/auth/login', '/auth/register', '/auth/oidc/', '/auth/invitations/lookup', '/api/v1/embed/'];
 
+/**
+ * 判断某个请求 URL 是否属于"无需登录的公开认证接口"白名单。
+ * 
+ * @param url 将要被判断的 url
+ * @returns 返回布尔值，true 就是包含，false 就是不包含
+ */
 function isPublicAuthRequest(url?: string): boolean {
   if (!url) return false;
   return PUBLIC_AUTH_PATHS.some(p => url.includes(p));
@@ -127,6 +146,7 @@ instance.interceptors.response.use(
     // 根据业务状态码处理逻辑
     const { status, data } = response;
     if (status >= 200 && status < 300) {
+      // 由于前面将完整响应拆包成了 data，状态码被丢掉了，但是有些业务又必须知道状态码。所以这里再重新加上。
       return withHttpStatus(data, status);
     } else {
       return Promise.reject(withHttpStatus(data, status));
@@ -166,6 +186,11 @@ instance.interceptors.response.use(
       return Promise.reject(withHttpStatus({ status, message: msg || t('error.invalidCredentials') }, status));
     }
 
+    // 嵌入页是把智能体挂到第三方网站上的独立入口（/embed/:channelId），
+    // 访客是匿名的、用渠道 token 而不是用户 JWT 认证。
+    // 所以 401 不能走"刷新 token → 跳登录"那套用户流程，
+    // 否则会在别人的网站里弹出登录页或陷入循环；
+    // 直接把错误交给嵌入组件处理才是正确做法。
     // Embed 调试页/挂件：无 JWT 时直接拒绝，勿走 refresh → /login
     if (error.response.status === 401 && isEmbedPage()) {
       const { status, data } = error.response;

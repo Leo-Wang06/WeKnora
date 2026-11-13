@@ -54,6 +54,7 @@ func (r *userRepository) CreateUser(ctx context.Context, user *types.User) error
 }
 
 // GetUserByID gets a user by ID
+// 根据 JWT 里解析出的 user_id，把用户的完整账号记录从数据库取出来。
 func (r *userRepository) GetUserByID(ctx context.Context, id string) (*types.User, error) {
 	var user types.User
 	if err := r.db.WithContext(ctx).Where("id = ?", id).First(&user).Error; err != nil {
@@ -409,6 +410,7 @@ func (r *authTokenRepository) CreateToken(ctx context.Context, token *types.Auth
 }
 
 // GetTokenByValue gets a token by its value
+// 查询存储在数据库中的 token；长期 token 还是短期 token 取决于调用方传进来的 tokenValue
 func (r *authTokenRepository) GetTokenByValue(ctx context.Context, tokenValue string) (*types.AuthToken, error) {
 	var token types.AuthToken
 	if err := r.db.WithContext(ctx).Where("token = ?", tokenValue).First(&token).Error; err != nil {

@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>C02 · 运行中介入与续流｜WeKnora 全栈源码专题</title>
+  <style>
+    :root { color-scheme: light; --ink: #182d2a; --muted: #495e57; --accent: #126657; --rule: #c4cfc5; --paper: #f8f8f1; --warm: #95502b; --soft: #e8f2ec; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--paper); color: var(--ink); font: 1rem/1.75 system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+    main { max-width: 62rem; margin: auto; padding: 2.5rem clamp(1rem, 4vw, 2rem) 4rem; }
+    a { color: var(--accent); text-underline-offset: .2em; overflow-wrap: anywhere; }
+    nav { display: flex; gap: .5rem 1.5rem; flex-wrap: wrap; }
+    header { border-bottom: 2px solid var(--ink); padding: 1rem 0 1.35rem; }
+    h1 { margin: .5rem 0; font-size: clamp(1.8rem, 5vw, 2.8rem); line-height: 1.25; }
+    h2, legend { margin: 0 0 .6rem; font-size: 1.2rem; font-weight: 650; }
+    h3 { margin: .2rem 0 .5rem; font-size: 1.1rem; }
+    p { margin: .5rem 0; }
+    section, fieldset { margin: 1.6rem 0 0; }
+    fieldset { min-width: 0; padding: 1rem clamp(.9rem, 3vw, 1.5rem); border: 1px solid var(--rule); border-radius: .7rem; background: #fffefa; }
+    legend { padding: 0 .3rem; }
+    .eyebrow { color: var(--accent); font-weight: 700; letter-spacing: .09em; font-size: .84rem; text-transform: uppercase; }
+    .lead { font-size: 1.08rem; }
+    .note { padding: .75rem 1rem; background: var(--soft); border-left: .3rem solid var(--accent); border-radius: .25rem; }
+    .choices { position: relative; margin-top: .8rem; }
+    .choices input { position: absolute; inline-size: 1px; block-size: 1px; opacity: 0; }
+    .choices label { display: inline-block; margin: 0 .3rem .5rem 0; padding: .42rem .85rem; border: 1px solid var(--rule); border-radius: .45rem; cursor: pointer; }
+    .choices label:hover { border-color: var(--accent); }
+    .choices input:checked + label { background: var(--ink); color: white; border-color: var(--ink); }
+    .choices input:focus-visible + label, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+    .case { display: none; margin-top: .35rem; padding-top: .9rem; border-top: 1px solid var(--rule); }
+    #case-a:checked ~ .case-a, #case-b:checked ~ .case-b { display: block; }
+    .path { color: var(--accent); font-weight: 600; overflow-wrap: anywhere; }
+    .timeline { list-style: none; counter-reset: tick; margin: 1.1rem 0; padding: 0 0 0 .5rem; border-left: 2px solid var(--rule); }
+    .timeline li { position: relative; counter-increment: tick; margin: 0 0 .75rem 1rem; padding: .65rem .85rem .7rem; background: #f6f7f2; border: 1px solid var(--rule); border-radius: .5rem; }
+    .timeline li::before { content: counter(tick); position: absolute; left: -1.98rem; top: .77rem; display: grid; place-items: center; width: 1.3rem; height: 1.3rem; border-radius: 50%; background: var(--accent); color: white; font-size: .74rem; font-weight: 700; }
+    .timeline b { display: inline-block; min-width: 6.4rem; }
+    .tag { display: inline-block; margin-right: .4rem; padding: .05rem .4rem; border: 1px solid var(--rule); border-radius: .35rem; color: var(--muted); font-size: .83rem; white-space: nowrap; }
+    .turn { padding: .85rem; border: 1px dashed var(--accent); border-radius: .5rem; background: #f0f7ef; }
+    .turn p { margin: .15rem 0; }
+    .turn strong { color: var(--accent); }
+    .boundary { color: #6f3b24; }
+    #evidence { border-top: 1px solid var(--rule); padding-top: 1rem; color: var(--muted); }
+    #evidence ul { padding-inline-start: 1.3rem; }
+    #evidence li { margin: .45rem 0; }
+    code { font-family: ui-monospace, "Cascadia Code", monospace; overflow-wrap: anywhere; font-size: .93em; }
+    @media print { body { background: white; } nav, .choices label, .choices input { display: none; } .case { display: block; } fieldset, .timeline li { break-inside: avoid; } }
+  </style>
+</head>
+<body>
+  <main>
+    <nav aria-label="课程导航">
+      <a href="../../WeKnora/导学.md">返回导学</a>
+      <a href="../C02-流式聊天与运行中协作.md">返回课程 · C02 流式聊天与运行中协作</a>
+    </nav>
+    <header>
+      <p class="eyebrow">WeKnora / C02 / 离线互动专题</p>
+      <h1>运行中介入与续流：换一个投递时机，换一条时间线</h1>
+      <p class="lead">同一条正在流式回答的聊天，途中发送“补充：只比较前端实现”。选<strong>注入当前运行</strong>时，SSE 回执决定何时在当前回答里插入用户气泡；选<strong>当前结束后再说</strong>时，当前回答不在此处切开，前端等待下一条独立的 assistant 运行并接上它的流。下方切换两条<strong>示意时间线</strong>，辨认哪个是网络回执、哪个只是界面预览。</p>
+    </header>
+
+    <section id="mechanism">
+      <h2>机制怎么工作</h2>
+      <p>已有 Agent 回答仍在生成时，<code>handleSteerMsg</code> 为补充消息生成 <code>steer_id</code>，连同当前 <code>expected_assistant_message_id</code> 和 <code>delivery</code> 通过 <code>POST /sessions/:id/steer</code> 送出。<code>inject</code> 会立即放一个“待确认”的用户预览气泡；<code>after</code> 只保留待处理队列，不以预览冒充本轮已注入。<strong>HTTP 回应表示这次 steer 请求的处理状态，不等于当前 SSE 里已经出现了执行分界。</strong> HTTP 与 SSE 可能交错到达，前端靠 <code>steer_id</code> 对齐；收到 <code>user_message_injected</code> 时才把用户消息放到此前的 assistant 内容下面，并建立后续 assistant 展示段。</p>
+      <p class="note">关键不变量：屏幕上被切开的 assistant 是<strong>视觉分段</strong>，不是多条持久化 assistant 消息。新段可用 <code>steer-cont-…</code> 作列表键，却仍保存同一个 <code>assistant_message_id</code>，所以停止、恢复及后续事件归并必须使用 <code>persistedAssistantId</code>；协作状态也按这个真实 ID 汇集，同组快照忽略非递增的 <code>revision</code>，旧运行任务的终态不被后来同任务同 <code>run_id</code> 的更新倒写。<code>after</code> 的后续独立运行则寻找<strong>另一个</strong>未完成 assistant ID，再用 GET 接入那条流。两者不可混为一谈。</p>
+    </section>
+
+    <fieldset id="explore">
+      <legend>选择补充消息的投递方式</legend>
+      <p>共同起点（示意）：用户已发起 <code>POST /api/v1/agent-chat/:session</code>，SSE 的 <code>agent_query</code> 已给出持久化 assistant ID <code>A</code>，当前回答仍在流动；这时输入同一句“补充：只比较前端实现”。<strong>只改变 delivery 与对应运行时机。</strong> 单击选项或用键盘方向键切换，无脚本、断网也可读。</p>
+      <div class="choices">
+        <input id="case-a" type="radio" name="case" aria-controls="result-a" checked><label for="case-a">A · 注入当前运行</label>
+        <input id="case-b" type="radio" name="case" aria-controls="result-b"><label for="case-b">B · 当前完成后再说</label>
+        <div class="case case-a" id="result-a" role="group" aria-label="注入当前运行的时间线">
+          <h3>场景 A｜运行还活着，当前轮接受注入</h3>
+          <p class="path"><code>handleSteerMsg(delivery='inject')</code> → 预览 → <code>steerSession</code> → SSE <code>user_message_injected</code> → <code>forkAfterInjectedUser</code></p>
+          <ol class="timeline" aria-label="注入当前运行的事件顺序">
+            <li><b>原流在跑</b><span class="tag">SSE</span><code>agent_query</code> 把真实 ID <code>A</code> 交给前端；此前已有 assistant 思考、工具或答案内容。</li>
+            <li><b>点“注入”</b><span class="tag">界面 + HTTP</span>本地创建 <code>steer_id=S</code>、记住预期 ID <code>A</code>；先显示 <code>_steerPending</code> 用户预览，再发 <code>POST /sessions/:id/steer</code>，<code>delivery=inject</code>。预览<strong>不意味着</strong>运行已经读到消息。</li>
+            <li><b>两个回执竞速</b><span class="tag">HTTP / SSE</span>HTTP 可先回 <code>queued</code>，也可在 SSE 注入回执之后才回；若状态是 <code>already_injected</code>，前端清理待确认状态。不能凭 HTTP 到达顺序判定气泡分界。</li>
+            <li><b>真正分叉</b><span class="tag">SSE</span>处理 <code>user_message_injected(S)</code>：复用已有用户预览或恢复历史里的持久化用户行，封口此前的 assistant 段，把用户行移到其下方，再创建后续 assistant 展示段；后续事件绑定到新段，队列移除 <code>S</code>。</li>
+            <li><b>同轮收尾</b><span class="tag">SSE</span>直到 <code>complete</code> 才把当前 assistant 轮标成完成；此前某段的 <code>answer.done</code> 只结束该答案段，不能当作整轮完成。</li>
+          </ol>
+          <div class="turn" aria-label="本轮的视觉排列示意">
+            <p>屏幕顺序：<strong>assistant 已输出段</strong> → <strong>插入的用户消息 S</strong> → <strong>assistant 继续段</strong></p>
+            <p>身份关系：第一段 <code>id=A</code>；继续段 <code>id=steer-cont-S</code>（展示键），<code>assistant_message_id=A</code>（持久化消息）。<strong>不是另起一个 assistant ID。</strong></p>
+          </div>
+          <p>效果：读者能在当前回答的前后片段之间看见插入的用户消息；前端按 <code>steer_id</code> 合并预览与 SSE 回执，而不是把预览和回执当两次注入；重放时优先复用历史行和已切段。</p>
+        </div>
+        <div class="case case-b" id="result-b" role="group" aria-label="当前完成后再说的时间线">
+          <h3>场景 B｜选择 after，留给下一次运行</h3>
+          <p class="path"><code>handleSteerMsg(delivery='after')</code> → 排队 → 当前 SSE <code>complete</code> → <code>attachSteerFollowUp</code> → <code>GET continue-stream?message_id=B</code></p>
+          <ol class="timeline" aria-label="完成后续接的事件顺序">
+            <li><b>原流在跑</b><span class="tag">SSE</span>当前 assistant 的持久化 ID 仍是 <code>A</code>，正在产生自己的答案。</li>
+            <li><b>点“完成后”</b><span class="tag">HTTP</span>为补充消息记下 <code>steer_id=S</code>、预期 ID <code>A</code> 和 <code>delivery=after</code>，发 <code>POST /sessions/:id/steer</code>。此选择不会调用注入预览，也不凭 HTTP <code>queued</code> 在本轮制造 <code>user_message_injected</code> 分界。</li>
+            <li><b>A 正常收尾</b><span class="tag">SSE</span><code>complete</code> 调用 <code>onTurnComplete</code> / <code>flushSteerAfterTurn(A)</code>。尚有未失败的队列项时，<code>attachSteerFollowUp</code> 开始查看消息列表，而不是把当前 A 的流硬切成新消息。</li>
+            <li><b>发现下一轮</b><span class="tag">HTTP 列表</span>前端寻找<strong>与 A 不同</strong>、未完成且未等待输入的 assistant <code>B</code>；按 <code>B.request_id</code> 找到下一轮已持久化的用户消息行，替换预览/补齐显示，再同步服务端待处理队列。</li>
+            <li><b>接上 B 的流</b><span class="tag">HTTP + SSE</span><code>startStream({method:'GET', url:'/api/v1/sessions/continue-stream', query:B})</code> 接入 <code>B</code>；这里的 GET 是<strong>追上后续独立运行</strong>，不等于 A 因异常掉线后的重连。</li>
+          </ol>
+          <div class="turn" aria-label="独立后续运行的视觉排列示意">
+            <p>屏幕顺序：<strong>assistant A 完成</strong> → <strong>下一轮的用户消息 S</strong> → <strong>assistant B 流式输出</strong></p>
+            <p>身份关系：<code>A ≠ B</code>，B 有自己的持久化 ID 与 <code>request_id</code>。正常排队路径通过 GET 接入已可见的 B，<strong>不是</strong>再 POST 一次 A 的原始问句。</p>
+          </div>
+          <p class="boundary">边界：如果 steer 接口给出 <code>new_run</code>，前端在原流仍活动时设置 <code>awaitingIdleSend</code>，等完成后才 <code>sendMsg</code>；已经空闲则直接正常发送。这是<strong>没有活跃运行可承接</strong>的回退路径，不要误讲成所有 <code>after</code> 都由前端再发一条 POST。</p>
+        </div>
+      </div>
+    </fieldset>
+
+    <section id="reconnect" aria-label="异常续流边界">
+      <h2>别把后续运行接入与掉线恢复混淆</h2>
+      <p>上述 B 是上一轮完成后，对<strong>另一个持久化 assistant ID</strong> 接流。另一种情况是<strong>同一流尚未终结却异常关闭或 30 秒无心跳</strong>：只有前端已从 <code>agent_query</code> 收到持久化 <code>assistant_message_id</code>、尚无 <code>complete/stop/error</code>、当前流未被主动取消、非嵌入流且端点是 <code>agent-chat</code> 或 <code>continue-stream</code>，<code>canReconnect()</code> 才允许按原 assistant ID 改用 <code>GET /sessions/continue-stream/:session?message_id=A</code> 重试（最多 8 次）。恢复是附着到 A 的事件流，<strong>不是再提交一次可能已被接受的 POST 问题</strong>。首次握手的 401 刷新凭据重试另有专门逻辑，不应与已收 ID 后的异常续流混称。</p>
+      <p class="boundary">前端证据只证明“何时发出请求、如何按回执展示、何时尝试接流”；页面<strong>不推断</strong>后端运行器何处读取注入队列、是否一定成功注入、内部持久化事务与失败恢复语义。若 SSE 没有对应回执，不能因为乐观预览就说注入已经发生。</p>
+    </section>
+
+    <section aria-label="复习提纲">
+      <h2>记住这一点</h2>
+      <p><strong>注入看 SSE 分界、after 看下一轮 ID、掉线看原轮持久化 ID。</strong> HTTP steer 回应与 SSE 回执可以乱序；“一个回答被视觉切成两段”仍只认同一个持久化 assistant 消息；只有已经拿到 ID、没有终结且非主动停止的异常断流，才改 GET 接原轮，绝不因网络中断重发已接受的 POST。</p>
+    </section>
+
+    <section id="evidence">
+      <h2>源码与证据</h2>
+      <p>源码基线：当前仓库 <code>d06733d41</code>；以下只引用前端可观察逻辑，行号供辅助定位。链接均指向本地仓库源码，离线阅读不依赖字体、脚本或服务端。</p>
+      <ul>
+        <li><a href="../../../frontend/src/api/chat/steer.ts"><code>frontend/src/api/chat/steer.ts:20–45 · steerSession</code></a> — <code>delivery</code>、预期 assistant ID、<code>steer_id</code> 进入 steer POST；返回状态契约的前端注释。</li>
+        <li><a href="../../../frontend/src/views/chat/index.vue"><code>frontend/src/views/chat/index.vue:1283–1361 · handleSteerMsg</code></a> — 空闲直送，注入预览，HTTP/SSE 乱序对账，<code>already_injected/new_run</code> 和错误分支。</li>
+        <li><a href="../../../frontend/src/views/chat/index.vue"><code>frontend/src/views/chat/index.vue:1453–1555 · flushSteerAfterTurn / attachSteerFollowUp</code></a> — 等待 idle 的回退发送；按新的 assistant ID 与 <code>request_id</code> 认领后续行，再 GET 接入。</li>
+        <li><a href="../../../frontend/src/composables/useChatStreamHandler.ts"><code>frontend/src/composables/useChatStreamHandler.ts:868–888,1437–1499 · collaboration_status / user_message_injected / complete</code></a> — 按真实 assistant ID 合并协作快照、拒绝旧版本覆盖终态；SSE 收据才触发界面分叉；<code>complete</code> 才结束整轮。</li>
+        <li><a href="../../../frontend/src/composables/useChatStreamHandler.ts"><code>frontend/src/composables/useChatStreamHandler.ts:1582–1644 · agent_query</code></a> — 读取 <code>assistant_message_id</code> 并将其绑定到当前 assistant。</li>
+        <li><a href="../../../frontend/src/utils/steerStreamFork.ts"><code>frontend/src/utils/steerStreamFork.ts:5–55,73–153 · previewSteerMessage / persistedAssistantId / forkAfterInjectedUser</code></a> — 预览不是分叉；插入/复用用户行、封口旧段、创建共享真实 ID 的展示段。</li>
+        <li><a href="../../../frontend/src/utils/steerStreamFork.ts"><code>frontend/src/utils/steerStreamFork.ts:171–282 · expandSteerForksInHistory</code></a> — 历史回放按照注入边界恢复视觉段；后段仍保存同一个持久化 ID。</li>
+        <li><a href="../../../frontend/src/api/chat/streame.ts"><code>frontend/src/api/chat/streame.ts:112–129,216–340 · canReconnect / runStream / onmessage</code></a> — 先收真实 ID 才可异常重连，已终结不可重连；HTTP/SSE 收发与重试时 POST → GET 的转换。</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

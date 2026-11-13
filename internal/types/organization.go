@@ -19,6 +19,10 @@ const (
 )
 
 // IsValid checks if the role is valid
+// 
+// IsValid 判断该角色值是否为 "admin" / "editor" / "viewer" 之一；
+// 零值或未知角色返回 false。它只校验枚举合法性，不判断权限等级，
+// 也不判断某个用户能否访问知识库。
 func (r OrgMemberRole) IsValid() bool {
 	switch r {
 	case OrgRoleAdmin, OrgRoleEditor, OrgRoleViewer:
@@ -29,6 +33,8 @@ func (r OrgMemberRole) IsValid() bool {
 }
 
 // HasPermission checks if this role has at least the required permission level
+// 
+// HasPermission 检查当前角色是否达到所需的最低权限级别。
 func (r OrgMemberRole) HasPermission(required OrgMemberRole) bool {
 	roleLevel := map[OrgMemberRole]int{
 		OrgRoleAdmin:  3,

@@ -27,10 +27,28 @@ installTDesignIconOfflineGuard();
 initTheme();
 initFont();
 
+/**
+ * 应用启动入口：创建 Vue 实例、安装插件，并在首屏渲染前完成必要初始化。
+ *
+ * 执行顺序（顺序有依赖，不要随意调整）：
+ * 1. 注册全局错误处理，避免组件内未捕获异常导致整页白屏
+ * 2. 安装 TDesign 和 Pinia（auth store 依赖 Pinia 已安装）
+ * 3. 本地存在 token 时，先 await /auth/me 校准用户与能力开关，
+ *    保证首帧渲染时权限相关 UI 不闪烁；失败则保持默认值，不阻断启动
+ * 4. 安装 router / i18n，并 await router.isReady() 后再挂载，
+ *    避免先渲染默认路由再跳转造成闪屏（Lite 自动登录也在这期间完成）
+ * 5. 挂载完成后再安装表单自动填充抑制
+ */
 async function bootstrap() {
   const app = createApp(App);
 
-  // 全局错误处理：捕获未处理的组件错误，防止白屏，只打印日志
+  /**
+   * 全局错误处理：捕获未处理的组件错误，防止白屏，只打印日志
+   * 
+   * @param err 抛出的错误
+   * @param instance 出错的组件实例
+   * @param info Vue 提供的错误上下文
+   */
   app.config.errorHandler = (err, instance, info) => {
     console.error("[WeKnora] Unhandled Vue error:", err, "\nComponent:", instance, "\nInfo:", info);
   };
@@ -58,17 +76,7 @@ async function bootstrap() {
   // 这是很常见的坑规避手段。如果直接 mount，Vue 会先渲染初始路由（可能是默认页），导航守卫跑完再跳走，用户会看到闪屏。await router.isReady() 保证第一次导航完全落定后才出第一帧，同时也让 Lite 版的自动登录逻辑跑完。
   await router.isReady();
   app.mount("#app");
-  // 全局给页面里的表单控件打上 autocomplete 属性，抑制浏览器和密码管理器的自动填充。
-  /**为什么需要它
-    WeKnora 是个聊天 + 知识库应用，页面上到处是文本框：聊天输入框、搜索框、改名框、API Key / Secret 的配置框……
 
-    如果没有这个守卫，实际会遇到的问题：
-
-    密码管理器误判：Chrome / 1Password / Bitwarden 会把「密码框附近的文本框」当成用户名，或者把搜索框识别成登录框，弹出填充下拉——挡住聊天输入框的 UI
-    自动弹出保存/生成密码：设置页里的密码输入框会触发「保存密码」或「生成强密码」提示，对产品来说是噪音
-    历史值下拉：普通输入框会弹出以前输入过的内容（Chrome 的 form autofill），在搜索、重命名这类场景里很干扰
-    注意它不影响登录：登录页的输入框显式声明了 autocomplete，会被跳过，所以正常的保存密码流程照常工作。 
-  */
   installAutofillGuard();
 }
 

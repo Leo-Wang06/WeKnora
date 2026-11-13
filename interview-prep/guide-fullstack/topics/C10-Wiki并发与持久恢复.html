@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>C10 · Wiki 并发与持久恢复</title>
+  <style>
+    :root { color-scheme: light; --ink: #182d2a; --muted: #495e57; --accent: #126657; --rule: #c4cfc5; --paper: #f8f8f1; --warning: #8a4b18; --warning-bg: #fff5e9; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--paper); color: var(--ink); font: 1rem/1.75 system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+    main { max-width: 60rem; margin: auto; padding: 2.5rem clamp(1rem, 4vw, 2rem) 4rem; }
+    a { color: var(--accent); text-underline-offset: .2em; overflow-wrap: anywhere; }
+    nav { display: flex; gap: .5rem 1.5rem; flex-wrap: wrap; }
+    header { border-bottom: 2px solid var(--ink); padding: 1rem 0; }
+    h1 { margin: .5rem 0; font-size: clamp(1.8rem, 5vw, 2.8rem); line-height: 1.25; }
+    h2, legend { margin: 0 0 .6rem; font-size: 1.18rem; font-weight: 650; }
+    h3 { margin: .25rem 0; font-size: 1.05rem; }
+    p { margin: .5rem 0; }
+    section, fieldset { margin: 1.6rem 0 0; }
+    fieldset { min-width: 0; padding: 1rem clamp(.9rem, 3vw, 1.5rem); border: 1px solid var(--rule); border-radius: .7rem; background: #fffefa; }
+    legend { padding: 0 .3rem; }
+    .lede { font-size: 1.1rem; max-width: 55ch; }
+    .note { background: #e9f2ed; border-inline-start: .25rem solid var(--accent); padding: .75rem 1rem; border-radius: .2rem; }
+    .timeline { padding: 0; margin: 1rem 0; list-style: none; counter-reset: tick; }
+    .timeline li { position: relative; counter-increment: tick; margin: 0 0 .75rem .9rem; padding: .35rem .6rem .65rem 2rem; border-inline-start: 2px solid var(--rule); }
+    .timeline li::before { content: counter(tick); position: absolute; inset-inline-start: -1rem; top: .45rem; width: 1.8rem; height: 1.8rem; border-radius: 50%; display: grid; place-items: center; background: var(--ink); color: #fff; font-weight: 700; font-size: .82rem; }
+    .timeline strong { display: block; line-height: 1.5; }
+    .timeline li.crash { background: var(--warning-bg); border-color: var(--warning); border-radius: .35rem; }
+    .timeline li.crash::before { background: var(--warning); }
+    .tag { display: inline-block; padding: 0 .45rem; margin-inline-start: .3rem; font-size: .8rem; border-radius: 1rem; background: #d9eae2; white-space: nowrap; }
+    .choices { position: relative; margin-top: .8rem; }
+    .choices input { position: absolute; inline-size: 1px; block-size: 1px; opacity: 0; }
+    .choices label { display: inline-block; margin: 0 .3rem .5rem 0; padding: .4rem .8rem; border: 1px solid var(--rule); border-radius: .4rem; cursor: pointer; }
+    .choices input:checked + label { background: var(--ink); color: white; border-color: var(--ink); }
+    .choices input:focus-visible + label, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+    .case { display: none; margin-top: .35rem; padding-top: .6rem; border-top: 1px solid var(--rule); }
+    #case-a:checked ~ .case-a, #case-b:checked ~ .case-b { display: block; }
+    .case ol { padding-inline-start: 1.4rem; }
+    .case li { margin: .35rem 0; }
+    .path { color: var(--accent); font-weight: 600; overflow-wrap: anywhere; }
+    #evidence { border-top: 1px solid var(--rule); padding-top: 1rem; color: var(--muted); }
+    #evidence ul { padding-inline-start: 1.3rem; }
+    #evidence li { margin: .5rem 0; }
+    code { font-family: ui-monospace, "Cascadia Code", monospace; overflow-wrap: anywhere; }
+    @media print { body { background: white; } nav, .choices label, .choices input { display: none; } .case { display: block; } fieldset, .timeline li { break-inside: avoid; } }
+  </style>
+</head>
+<body>
+  <main>
+    <nav aria-label="课程导航">
+      <a href="../../WeKnora/导学.md">返回导学</a>
+      <a href="../C10-Wiki持久任务与恢复.md">返回课程 · C10 Wiki 持久任务与恢复</a>
+    </nav>
+    <header>
+      <h1>C10 · Wiki 并发与持久恢复</h1>
+      <p class="lede">看清两个不同的问题：任务操作先落库、触发器随后唤醒，进程在哪一步崩溃仍能恢复；Redis 是否配置，决定同一个知识库能否并发处理不同文档。</p>
+    </header>
+
+    <section id="mechanism">
+      <h2>机制怎么工作</h2>
+      <p>场景：知识库开启 Wiki 自动生成，文档的后处理准备从 <code>processing</code> 进入 <code>finalizing</code>。<code>KnowledgePostProcessService.Handle</code> 调用 <code>SeedKnowledgeFinalizingWithPendingOp</code>：在<strong>同一个数据库事务</strong>中更新解析状态及 <code>pending_subtasks_count</code>，并插入知识库范围的 <code>task_pending_ops</code> Wiki 操作；只有事务成功后才排入唤醒消费者的 Wiki trigger。操作行是持久工作，trigger 只是调度信号；它们不是一笔跨数据库与队列的原子提交。</p>
+      <p class="note">如果原子 seed 提交后、trigger 入队前崩溃，数据库里仍有 <code>wiki:ingest</code> pending 行。启动时 <code>recoverPendingWikiTasks</code> 在处理器注册后按活跃租户／知识库及已落库的任务 lane 补发 <code>wiki:ingest</code> 或 <code>wiki:finalize</code> trigger；被软删或缺失的范围不会重新触发。这里保证的是<strong>已有持久行的补发唤醒</strong>，不是“恰好执行一次”；后续生成的 finalize 行采用单独的尽力写入，若该插入失败，恢复扫描无法凭空重建缺失行。超过失败预算时也只是尝试写死信，并不保证死信留存。</p>
+      <p>模式选择只看 <code>REDIS_ADDR</code> 是否为空：有地址时装配 Redis/asynq，并允许同一 KB 的不同文档批次并行，靠数据库按 <code>dedup_key</code> 成组 claim、按 Wiki 页面 slug 锁住更新，以及每 KB 在途批次数上限维持边界；无地址时用进程内执行器和 <code>liteLocks</code> 串行化同一 KB，读取 pending 行用 peek，并安装本地模型并发限流器。<strong>填了 Redis 地址但启动 Ping 不通是启动依赖错误，不能自动降级 Lite。</strong>运行过程中 Redis 调用临时失败时，部分 slug 锁和在途配额会选择 fail-open；这也不是“退回 Lite”，且意味着互斥或上限不能在 Redis 故障期间绝对保证。</p>
+    </section>
+
+    <section id="timeline" aria-label="持久恢复时序图">
+      <h2>把崩溃点放到时序里</h2>
+      <p>以下是一条<strong>示意时序</strong>，只展示代码能支持的状态变化，不代表实际耗时：</p>
+      <ol class="timeline">
+        <li><strong>后处理决定启动 Wiki <span class="tag">条件</span></strong><code>willSpawnWiki</code> 成立后，预留一个 Wiki 子任务计数位；否则不走这个 Wiki seed 分支。</li>
+        <li><strong>同库原子提交 <span class="tag">持久</span></strong><code>SeedKnowledgeFinalizingWithPendingOp</code>：只把仍为 <code>processing</code> 的文档改成 <code>finalizing</code> 并写计数，同时创建 pending Wiki 操作；事务失败时两者都不提交。</li>
+        <li class="crash"><strong>提交之后，trigger 入队之前进程崩溃 <span class="tag">断点</span></strong>pending 行还在 DB；没有 trigger 不表示任务已完成。若进程尚在而 enqueue 返回错误，后处理只重试 trigger，不再追加第二条 pending 行。</li>
+        <li><strong>重启，注册处理器后补发 <span class="tag">恢复</span></strong><code>recoverPendingWikiTasks</code> 清理已失效 scope、枚举仍有 pending 行的活跃 Wiki 队列 lane 并重新入队 trigger。Lite 的内存触发器在重启后也依赖此步骤。</li>
+        <li><strong>消费者领用并结算 <span class="tag">边界</span></strong>Redis 模式 claim 标记 <code>claimed_at</code>，Lite 模式在 KB 锁内 peek。处理成功则删行；失败释放 claim 并保留行等后续重试，超过失败预算时尝试写死信并清理 pending 行；若死信写入失败仍可能删 pending，因此并不保证死信证据持久化。已 claim 而崩溃的行仍可在超时变 stale 后重新领取；无可领用但仍有 pending 行时尝试安排按 KB 的延迟 recheck。</li>
+      </ol>
+    </section>
+
+    <fieldset id="explore">
+      <legend>切换部署条件：同一 KB 来了两批 Wiki 文档，怎样消费？</legend>
+      <p>共享前提：Wiki pending 行已经写入数据库，trigger 已经或经重启恢复后到达消费者；两个分支<strong>共用上面的原子 seed 与启动补发</strong>，切换的是 Redis 配置和处理阶段的并发控制，不是持久性开关。</p>
+      <div class="choices">
+        <input id="case-a" type="radio" name="case" aria-controls="result-a" checked><label for="case-a">REDIS_ADDR 已配置且启动可连</label>
+        <input id="case-b" type="radio" name="case" aria-controls="result-b"><label for="case-b">REDIS_ADDR 为空 · Lite</label>
+        <div class="case case-a" id="result-a">
+          <h3>Redis 模式：同一 KB 可并行不同文档，热点 slug 仍要协调</h3>
+          <p class="path"><code>ProcessWikiIngest → reserveInflightSlot → claimPendingList → ClaimBatch → withSlugLock → trimPendingList / requeueFailedOps</code></p>
+          <ol>
+            <li><code>reserveInflightSlot</code> 为该 KB 预留 Redis 在途槽；满额时调度合并的后续 trigger、不先领取行。默认上限 <code>wikiInflightDefault = 4</code> 是配置缺省值，并非吞吐量实测。</li>
+            <li><code>ClaimBatch</code> 按 <code>dedup_key</code>（文档）挑成组的 eligible 行；Postgres 用 <code>FOR UPDATE SKIP LOCKED</code> 锁各 key 的锚行，整组排除已有 fresh claim 的 key，避免 ingest/retract 分给并发批次。不同文档可分别被领用。</li>
+            <li>两个批次若更新同一 Wiki 页面，<code>withSlugLock</code> 在 Redis 上按 <code>kbID + slug</code> 串行化该页的读改写；它不阻断整 KB 的并行。Redis 操作报错时该锁会 fail-open，不能把它误述为所有故障下的强一致锁。</li>
+            <li>崩溃遗留的 DB claim 在 <code>wikiClaimStaleAfter = 90m</code> 后可重新领取；代码设 Wiki ingest 任务 timeout 为 <code>60m</code>。无可领用但仍有 pending 行时，<code>scheduleStaleClaimRecheck</code> 尝试安排一次超过 stale 阈值的补查；补查 trigger 入队出错时仍可能需要下次启动恢复或其他 trigger。领用只是租用，<strong>不是最终结算或 exactly-once 承诺</strong>。</li>
+          </ol>
+          <p>如果只是<strong>启动时</strong> Redis 地址可读但服务器不可达，<code>initRedisClient</code> 的 <code>Ping</code> 返回错误，Redis 模式无法成功装配；不会偷偷切换到下面的 Lite 分支。</p>
+        </div>
+        <div class="case case-b" id="result-b">
+          <h3>Lite 模式：同一进程、同一 KB 一次只跑一个批次</h3>
+          <p class="path"><code>BuildContainer → NewSyncTaskExecutor + registerLiteModelConcurrencyLimiter → ProcessWikiIngest → liteLocks → peekPendingList</code></p>
+          <ol>
+            <li><code>REDIS_ADDR</code> 为空才装配进程内 <code>SyncTaskExecutor</code>，用 <code>registerLiteModelConcurrencyLimiter</code> 安装每模型本地限流；它与 Wiki 的每 KB 互斥是两层不同控制。</li>
+            <li><code>liteLocks.LoadOrStore(kbID)</code> 保证<strong>该进程内</strong>同一 KB 仅一个批次在跑；冲突返回 <code>ErrWikiIngestConcurrent</code> 等待任务系统重试，而不是同时领取两份文档。</li>
+            <li>有独占 KB 锁的批次从同一数据库 <code>task_pending_ops</code> 通过 <code>peekPendingList / PeekBatch</code> 读行，不需 Redis slug 锁，也不做 Redis 在途槽预留；成功后仍要删除已处理行、失败则重试；超过预算时尝试写死信后清理待办行，死信落库不是无条件保证。注意 Lite 的 <code>PeekBatch</code> 按失败次数、再按行 ID 排序，而后续折叠取返回序列末项：旧操作重试后可能压过较新的撤回操作，这不是严格按时间的“最后写入获胜”。</li>
+            <li>进程结束会失去本地 trigger 和锁；数据库 pending 行不丢。重启后 <code>recoverPendingWikiTasks</code> 重新投递唤醒，不因 Lite 的队列在内存中就把任务持久性归给内存。</li>
+          </ol>
+          <p>这里的序列化只对进程内的 Wiki 服务实例成立；不要将 Lite 的本地互斥描述成跨多进程分布式锁。</p>
+        </div>
+      </div>
+    </fieldset>
+
+    <section aria-label="复习提纲">
+      <h2>记住这一点</h2>
+      <p>一句口播：<strong>“先在同一 DB 事务里把文档交到 finalizing 并种下 Wiki pending 行，再异步投递可补发的 trigger；Redis 已配置且可用时靠按文档 claim、按 slug 锁和每 KB 在途上限放开同 KB 批次并行，没配 Redis 的 Lite 则进程内按 KB 串行。崩溃后重启按持久行补发，但 claim 不是结算，也不保证 exactly-once。”</strong></p>
+    </section>
+
+    <section id="evidence">
+      <h2>源码与证据</h2>
+      <p>源码基线：当前仓库 Git <code>d06733d41</code>；以下符号和行号为阅读定位，点击文件可在本地打开源码；不引用线上吞吐或性能测量。</p>
+      <ul>
+        <li><a href="../../../internal/application/service/knowledge_post_process.go"><code>internal/application/service/knowledge_post_process.go:315–345 · KnowledgePostProcessService.Handle</code></a> — <code>willSpawnWiki</code> 时要求 <code>TaskPendingOpsFinalizingSeeder</code>，构造 pending op 并调用原子 seed；同文件 :271–285、:438–516 是状态已为 finalizing 时只补投 trigger，以及投递失败的重试边界。</li>
+        <li><a href="../../../internal/application/repository/task_queue.go"><code>internal/application/repository/task_queue.go:127–189 · SeedKnowledgeFinalizingWithPendingOp</code></a> — DB 事务按仍处于 processing 的行更新状态和计数，插入 pending op；同文件 :191–222 的 Lite <code>PeekBatch</code> 按 fail_count、id 排序，:339–356 的 Redis <code>ClaimBatch</code> 按 id 返回。</li>
+        <li><a href="../../../internal/application/service/wiki_ingest.go"><code>internal/application/service/wiki_ingest.go:31–58,104–123 · ErrWikiIngestConcurrent / wikiClaimStaleAfter / wikiInflightDefault</code></a> — Lite 同 KB 冲突语义、Redis 并行设计、90m stale claim 和默认在途槽配置；同文件 :976–1112 的 <code>claimPendingList</code>、<code>withSlugLock</code>、<code>reserveInflightSlot</code> 给出实际实现及运行中 Redis 错误的 fail-open 边界。</li>
+        <li><a href="../../../internal/application/service/wiki_ingest_batch.go"><code>internal/application/service/wiki_ingest_batch.go:347–369,448–529,1004–1041 · ProcessWikiIngest</code></a> — Redis 无整 KB 互斥并分组 claim，Lite 用 <code>liteLocks</code> + peek；满额后重排；异常退出释放 claim，正常结算后才置 <code>claimsSettled</code>。</li>
+        <li><a href="../../../internal/container/recover_pending_wiki_tasks.go"><code>internal/container/recover_pending_wiki_tasks.go:25–121 · recoverPendingWikiTasks</code></a> — 清理已删 KB／租户 pending 行；按活跃 scope 与任务 lane 恢复 ingest/finalize trigger；重复触发冲突可接受，个别 enqueue 出错记日志并继续。</li>
+        <li><a href="../../../internal/container/container.go"><code>internal/container/container.go:507–539,959–983 · BuildContainer / initRedisClient</code></a> — <code>REDIS_ADDR</code> 分配 Redis/asynq 或 Lite 执行器及本地 limiter；有地址时 <code>Ping</code> 失败返回 <code>连接Redis失败</code>；同文件 :794–806 注册 handler 后才调用恢复函数。</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

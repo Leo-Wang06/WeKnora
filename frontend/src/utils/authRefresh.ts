@@ -56,18 +56,33 @@ export function isStreamAuthError(err: unknown): boolean {
   return (err as { name?: string }).name === 'StreamAuthError'
 }
 
+/**
+ * 判断是否为嵌入页 `/embed/...`
+ * 
+ * @returns 返回布尔值，true 就是是嵌入页，false 就不是嵌入页
+ */
 export function isEmbedPage(): boolean {
   if (typeof window === 'undefined') return false
+  // window.location.pathname 当前页面的路径部分，不含域名、查询参数、hash
   return window.location.pathname.startsWith('/embed/')
 }
 
+/**
+ * 将用户打回登录页
+ */
 export function redirectToLogin() {
+  // 非浏览器环境
   if (typeof window === 'undefined') return
+  // 已经在登录页了
   if (window.location.pathname === '/login') return
+  // 嵌入页
   if (isEmbedPage()) return
   window.location.href = '/login'
 }
 
+/**
+ * 清除所有 localStorage 内的 token 信息
+ */
 export function clearAuthStorage() {
   for (const key of AUTH_STORAGE_KEYS) {
     try {
@@ -84,6 +99,19 @@ export function forceReloginRedirect() {
   redirectToLogin()
 }
 
+/**
+ * 结算所有排队等待 token 刷新的请求。
+ *
+ * 第一个遇到 401 的请求负责刷新，期间其余 401 会把 Promise 的
+ * resolve/reject 压入 failedQueue（见 refreshAccessTokenShared）。
+ * 本函数在刷新结束时统一分发结果并清空队列：
+ * - 成功（error 为 null）：所有等待者 resolve 同一个新 token，
+ *   各自重放原请求；
+ * - 失败：所有等待者 reject 同一个错误，随后由调用方清理登录态并跳转。
+ *
+ * @param error 刷新失败的错误对象；传 null 表示刷新成功
+ * @param token 刷新成功后的新 access token；失败时传 null
+ */
 function processQueue(error: unknown, token: string | null = null) {
   failedQueue.forEach(({ resolve, reject }) => {
     if (error) {
@@ -110,28 +138,36 @@ export async function refreshAccessTokenShared(
   options: RefreshAccessTokenOptions = {},
 ): Promise<string> {
   const messages = { ...defaultMessages, ...options.messages }
+  // 这里最终拿到的是刷新 refreshToekn 的方法，用来重新获取 token
   const refresh = options.refresh ?? defaultRefresh
 
+  // 刷新 token 的"排队去重"机制：已经有刷新在进行了时，后来的调用者不自己再发请求，而是挂起等待同一个结果。
   if (isRefreshing) {
     return new Promise<string>((resolve, reject) => {
+      // 这里 failedQueue 是一个数组，用来接受所有排队请求的 Promise 对象
       failedQueue.push({ resolve, reject })
     })
   }
 
   isRefreshing = true
   try {
+    // 获取长期 refresh token
     const storedRefreshToken = localStorage.getItem('weknora_refresh_token')
+    // 没有就走重新登录
     if (!storedRefreshToken) {
       throw new Error(messages.pleaseRelogin)
     }
+    // 尝试重新获取 token
     const response = await refresh(storedRefreshToken)
 
     if (!response.success || !response.data?.token) {
       throw new Error(response.message || messages.tokenRefreshFailed)
     }
 
+    // 获取新的短期 token，以及新的长期 refresh token
     const { token, refreshToken: newRefreshToken } = response.data
     localStorage.setItem('weknora_token', token)
+    // 重新保存长期 refresh token 到 localStorage
     if (newRefreshToken) {
       localStorage.setItem('weknora_refresh_token', newRefreshToken)
     }

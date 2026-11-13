@@ -68,6 +68,22 @@ func IsCrossTenantSuperuser(ctx context.Context, cfg *config.Config) bool {
 //
 // Lookup errors are treated as "not a member" — the safest fallback
 // that doesn't expose other tenants on a transient DB hiccup.
+// 
+// IsTenantAccessible 判断 user 是否有权在 targetTenantID 租户内操作。
+// 这是授权检查，不是认证检查：传入的用户必须已经通过 ValidateToken
+// 的验签、吊销检查和启用状态校验。
+//
+// 按以下顺序判定，命中即放行：
+//  1. targetTenantID 就是用户的主租户（user.TenantID）；
+//  2. 用户是跨租户超管：user.CanAccessAllTenants 为 true，且集群开关
+//     cfg.Tenant.EnableCrossTenantAccess 已打开（两者缺一不可）；
+//  3. 用户在目标租户的 tenant_members 中有一条 active 成员记录。
+//
+// targetTenantID 为 0 一律拒绝。成员查询出错、记录不存在、已被软删除、
+// 状态为 invited/suspended，全部按"不是成员"处理——数据库抖动时宁可
+// 拒绝，也不能意外放行到其他租户。
+//
+// 本函数不校验租户是否还存在；需要租户详情的调用方应自行查询。
 func IsTenantAccessible(
 	ctx context.Context,
 	user *types.User,
@@ -87,10 +103,12 @@ func IsTenantAccessible(
 	if memberService == nil {
 		return false
 	}
+	// 当请求的目标工作区不是用户的主租户时，就去查"这个用户在那个目标工作区里有没有 active 的成员记录"——有就放行，没有就拒绝。
 	m, err := memberService.GetMembership(ctx, user.ID, targetTenantID)
 	if err != nil || m == nil {
 		return false
 	}
+	// 这里判断是否是其工作区的活跃用户
 	return m.Status == types.TenantMemberStatusActive
 }
 

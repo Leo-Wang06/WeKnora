@@ -4,6 +4,12 @@
 !.env.example
 !.gitignore
 !.github/
+# 只跟踪本项目安装的面试准备 skill，其余 .agents 内容仍忽略。
+!/.agents/
+/.agents/*
+!/.agents/skills/
+/.agents/skills/*
+!/.agents/skills/project-interview-skill/
 # Curated full-stack learning graph; other generated analysis data stays ignored.
 !/.ua/
 /.ua/*

@@ -50,6 +50,16 @@ type authSession struct {
 // the pairs; a key set on only one surface is a latent bug that surfaces as
 // "works in handler A, broken in handler B" depending on which read style
 // the handler uses.
+// 
+// applyAuthSession 把认证会话同时写入 gin 请求的两个上下文载体：
+//
+//   - c.Keys（通过 c.Get 或接收 *gin.Context 的辅助函数读取）
+//   - c.Request.Context()（通过 types.*FromContext 系列函数读取）
+//
+// 所有认证中间件都必须经过这个辅助函数，而不是各自手写这对赋值；
+// 只在其中一个载体上设置 key 是一种隐蔽的缺陷，会表现为
+// "在 handler A 里正常，到 handler B 就失效"——具体取决于该 handler
+// 用的是哪种读取方式。
 func applyAuthSession(c *gin.Context, s authSession) {
 	ctx := c.Request.Context()
 	set := func(key types.ContextKey, v any) {

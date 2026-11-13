@@ -78,19 +78,25 @@ const (
 	DetailSamePassword       = "same_password"
 )
 
-// getJwtSecret retrieves the JWT secret from the environment, falling back to a securely generated random secret.
+// getJwtSecret 返回用于签发和校验 JWT 的 HMAC 密钥：优先读取 JWT_SECRET
+// （忽略已知占位值），否则每个进程随机生成一个 256 位密钥。未配置
+// JWT_SECRET 时各进程密钥不同，token 重启即失效，多副本之间无法互认。
 func getJwtSecret() string {
 	jwtSecretOnce.Do(func() {
+		// 读取环境变量 JWT_SECRET，并去掉首尾空白字符，赋值给局部变量 envSecret。
 		envSecret := strings.TrimSpace(os.Getenv("JWT_SECRET"))
+		// 'weknora-jwt-secret' 和 'CHANGE-ME-jwt-secret' 是历史上公开的默认密钥，所以需要判断是否更改密钥
 		if envSecret != "" && envSecret != "weknora-jwt-secret" && envSecret != "CHANGE-ME-jwt-secret" {
 			jwtSecret = envSecret
 			return
 		}
 
 		randomBytes := make([]byte, 32)
+		// rand.Read 讲随机字节写进 randomBytes ，并检查是否写入成功，因为有时会出现 err ，导致只写进去了几个字节
 		if _, err := rand.Read(randomBytes); err != nil {
 			panic(fmt.Sprintf("failed to generate JWT secret: %v", err))
 		}
+		// 进行 Base64 编码
 		jwtSecret = base64.StdEncoding.EncodeToString(randomBytes)
 	})
 
@@ -1334,8 +1340,28 @@ func (s *userService) recordLastActiveTenant(ctx context.Context, user *types.Us
 // for, which may differ from user.TenantID after a /auth/switch-tenant
 // call. Tokens minted before tenant-level RBAC don't carry the claim;
 // in that case we fall back to user.TenantID for backward compatibility.
+// 
+// ValidateToken 校验 access token，返回 token 所属的用户以及该 token 绑定的租户。
+//
+// 校验内容：
+//  1. 签名算法必须是 HMAC 家族（防算法混淆），签名和有效期由 jwt.Parse 校验；
+//  2. 不能是 refresh token，也不能是 sandbox 终端票据；
+//  3. auth_tokens 表中必须存在该 token 且未被吊销；
+//  4. 用户必须存在且启用——以数据库为准，令牌有效不等于账号可用。
+//
+// 第二个返回值是 token 中 tenant_id claim 声明的激活租户，可能因
+// /auth/switch-tenant 而不同于 user.TenantID；老 token 没有该 claim 时
+// 回退到 user.TenantID。
+//
+// 本函数不做授权判断：不校验成员关系、角色，也不校验租户是否存在。
+// 这些由认证中间件负责，且中间件可能用 X-Tenant-ID 覆盖这里返回的租户。
+//
+// 查询 token/user 记录失败会作为基础设施错误返回，不会伪装成"已吊销"。
 func (s *userService) ValidateToken(ctx context.Context, tokenString string) (*types.User, uint64, error) {
+	// 此时的 token，已经是被验证过可以信任的了。若不被信任，则会抛错
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
+		// 类型断言，判断这个 token 的签名算法是不是 HMAC 家族（HS256/HS384/HS512）。
+		// 这里的 token 已经是解析完毕的 token，三段已分开并且进行了 Base64 反解码，但尚未被验证
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
 		}
@@ -1433,6 +1459,7 @@ func (s *userService) GetAccessTokenByID(ctx context.Context, id string) (*types
 	return redactAuthToken(token), nil
 }
 
+// 判断 token 的类型是不是 string，以及判断 token 是不是 refresh token
 func isRefreshTokenClaims(claims jwt.MapClaims) bool {
 	tokenType, ok := claims["type"].(string)
 	return ok && tokenType == "refresh"
@@ -1474,6 +1501,7 @@ func userIDFromSignedToken(tokenString string) (string, error) {
 // JSON numbers come back as float64 from jwt.MapClaims; the int64 /
 // uint64 branches cover legacy code paths and tests that build claims
 // directly. Negative values are treated as missing.
+// 取出"这张 token 代表的这次会话，被授权在哪个租户下操作"。
 func tenantIDFromClaims(claims jwt.MapClaims, fallback uint64) uint64 {
 	raw, ok := claims["tenant_id"]
 	if !ok {

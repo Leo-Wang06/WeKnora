@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>C07 · 三种检索路径，三套评分规则</title>
+  <style>
+    :root { color-scheme: light; --ink: #182d2a; --muted: #495e57; --accent: #126657; --rule: #c4cfc5; --paper: #f8f8f1; --surface: #fffefa; --soft: #e9f2eb; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--paper); color: var(--ink); font: 1rem/1.75 system-ui, -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+    main { max-width: 58rem; margin: auto; padding: 2.5rem clamp(1rem, 4vw, 2rem) 4rem; }
+    a { color: var(--accent); text-underline-offset: .2em; overflow-wrap: anywhere; }
+    nav { display: flex; gap: .5rem 1.5rem; flex-wrap: wrap; }
+    header { border-bottom: 2px solid var(--ink); padding: 1rem 0; }
+    h1 { margin: .5rem 0; font-size: clamp(1.8rem, 5vw, 2.8rem); line-height: 1.25; }
+    h2, legend { margin: 0 0 .6rem; font-size: 1.18rem; font-weight: 650; }
+    h3 { margin: .3rem 0; font-size: 1.08rem; }
+    p { margin: .5rem 0; }
+    section, fieldset { margin: 1.6rem 0 0; }
+    fieldset { min-width: 0; padding: 1rem clamp(.9rem, 3vw, 1.5rem); border: 1px solid var(--rule); border-radius: .7rem; background: var(--surface); }
+    legend { padding: 0 .3rem; }
+    .eyebrow { color: var(--accent); font-weight: 700; letter-spacing: .06em; }
+    .choices { position: relative; margin-top: .9rem; }
+    .choices input { position: absolute; inline-size: 1px; block-size: 1px; opacity: 0; }
+    .choices label { display: inline-block; margin: 0 .3rem .5rem 0; padding: .4rem .8rem; border: 1px solid var(--rule); border-radius: .4rem; cursor: pointer; }
+    .choices input:checked + label { background: var(--ink); color: white; border-color: var(--ink); }
+    .choices input:focus-visible + label, a:focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+    .case { display: none; margin-top: .4rem; padding-top: .9rem; border-top: 1px solid var(--rule); }
+    #case-vector:checked ~ .case-vector, #case-keyword:checked ~ .case-keyword, #case-mixed:checked ~ .case-mixed { display: block; }
+    .path { color: var(--accent); font-weight: 600; overflow-wrap: anywhere; }
+    .formula { background: var(--soft); border-inline-start: .25rem solid var(--accent); padding: .6rem .85rem; margin: .8rem 0; overflow-wrap: anywhere; }
+    .table-wrap { overflow-x: auto; margin: .75rem 0; }
+    table { border-collapse: collapse; width: 100%; min-width: 31rem; font-variant-numeric: tabular-nums; }
+    th, td { padding: .5rem .65rem; text-align: left; vertical-align: top; border-bottom: 1px solid var(--rule); }
+    thead { background: var(--soft); }
+    tbody tr:last-child td { border-bottom: 0; }
+    .note { color: var(--muted); font-size: .95rem; }
+    #evidence { border-top: 1px solid var(--rule); padding-top: 1rem; color: var(--muted); }
+    #evidence ul { padding-inline-start: 1.3rem; }
+    code { font-family: ui-monospace, SFMono-Regular, Consolas, monospace; overflow-wrap: anywhere; }
+    @media print { body { background: white; } nav, .choices label, .choices input { display: none; } .case { display: block; break-inside: avoid; } fieldset { break-inside: avoid; } }
+  </style>
+</head>
+<body>
+  <main>
+    <nav aria-label="课程导航">
+      <a href="../../WeKnora/导学.md">返回导学</a>
+      <a href="../C07-混合检索与重排.md">返回课程 · C07 混合检索与重排</a>
+    </nav>
+    <header>
+      <p class="eyebrow">C07 · 源码机制专题</p>
+      <h1>三种检索路径，三套评分规则</h1>
+      <p>切换“只有向量 / 只有关键词 / 两路都有”，看相同的<strong>示意召回列表</strong>如何得出不同分数和排序；重点不是记住一个“统一归一化”的口号，而是说清分支条件。</p>
+    </header>
+    <section id="mechanism">
+      <h2>机制怎么工作</h2>
+      <p>调用方拿到的检索结果先按检索器类型分成<strong>向量列表</strong>和<strong>关键词列表</strong>。<code>fuseOrDeduplicate</code> 看哪一类列表存在：只有向量时按 chunk ID 去重，<strong>原向量分数不变</strong>；只有关键词时，逐列表检查其最大有限正分数，<strong>只有最大值大于 1</strong> 才用这个最大值缩放该列表，再去重；两类都存在时，用各自列表内名次计算加权 RRF，除以理论最大 RRF 分数，然后按融合分数降序排列。单路去重保留同一 chunk 的最高分。</p>
+      <p class="note">边界：关键词列表最大有限分数 ≤ 1 时不会缩放（例如已给出 1.0 的检索引擎）；多个来源的列表各自处理，不能先拼成一条长榜再给后面列表的第一名错误地排位。这个页面只讲召回后的融合/去重，<strong>不把 rerank 当作默认步骤</strong>；只有请求明确启用 rerank 时，<code>HybridSearchWithRerank</code> 才走重排分支。</p>
+    </section>
+    <fieldset id="explore">
+      <legend>切换可用的召回来源</legend>
+      <p>假设查询“年假怎么申请”，候选 chunk 标记为 A、B、C、D；仅保留对应模式的列表，没召回到的 chunk 不参与该模式。两张列表均已按各自的原始分数降序排列。</p>
+      <p class="note"><strong>下表所有 ID、内容和分数均为教学自造示意，非仓库运行结果、非真实检索指标。</strong> V、K 各只有一份列表，便于跟踪；若同一检索器返回多份列表，每份仍独立排名，再取 chunk 在该检索器中的最佳名次。</p>
+      <div class="table-wrap">
+        <table aria-label="教学示意：向量列表和关键词列表的原始名次与分数">
+          <thead><tr><th scope="col">各自名次</th><th scope="col">向量列表 V（原分）</th><th scope="col">关键词列表 K（原分）</th></tr></thead>
+          <tbody>
+            <tr><th scope="row">1</th><td>A · 年假政策（0.84）</td><td>C · 请假表单（BM25 12）</td></tr>
+            <tr><th scope="row">2</th><td>B · 年假流程（0.78）</td><td>B · 年假流程（BM25 6）</td></tr>
+            <tr><th scope="row">3</th><td>C · 请假表单（0.68）</td><td>D · 年假材料（BM25 3）</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="choices">
+        <input id="case-vector" type="radio" name="case" aria-controls="result-vector" checked><label for="case-vector">只有向量 V</label>
+        <input id="case-keyword" type="radio" name="case" aria-controls="result-keyword"><label for="case-keyword">只有关键词 K</label>
+        <input id="case-mixed" type="radio" name="case" aria-controls="result-mixed"><label for="case-mixed">两路都有 V + K</label>
+        <div class="case case-vector" id="result-vector">
+          <h3>只有向量：原分数保留</h3>
+          <p class="path">无关键词列表 → <code>deduplicateByScore(flattenLists(vectorLists))</code> → 按原分数降序</p>
+          <p class="formula"><strong>规则：</strong>对每个 chunk 保留最高的向量原分；不调用 BM25 缩放，也不计算 RRF。此例只有一份 V 列表，所以分数完全照原表。</p>
+          <div class="table-wrap"><table aria-label="仅向量示意结果"><thead><tr><th scope="col">输出顺序</th><th scope="col">chunk</th><th scope="col">最终分数</th><th scope="col">原因</th></tr></thead><tbody>
+            <tr><th scope="row">1</th><td>A</td><td>0.84</td><td>向量原分 0.84</td></tr>
+            <tr><th scope="row">2</th><td>B</td><td>0.78</td><td>向量原分 0.78</td></tr>
+            <tr><th scope="row">3</th><td>C</td><td>0.68</td><td>向量原分 0.68</td></tr>
+          </tbody></table></div>
+          <p class="note">D 只出现在 K，此模式未召回。源码特意保留向量相似度的原有尺度，避免改变 FAQ 等路径依赖的向量阈值。</p>
+        </div>
+        <div class="case case-keyword" id="result-keyword">
+          <h3>只有关键词：按<strong>每份列表</strong>的最大值决定是否缩放</h3>
+          <p class="path">无向量列表 → 对每份 K 列表调用 <code>rescaleUnboundedScores(list)</code> → 合并同一 chunk 的最高分 → 降序</p>
+          <p class="formula"><strong>本例 K 的有限最大值：</strong>12 &gt; 1，所以 K 内的正有限分数按 <code>score′ = score / 12</code> 缩放：C = 12/12 = 1.00，B = 6/12 = 0.50，D = 3/12 = 0.25。</p>
+          <div class="table-wrap"><table aria-label="仅关键词示意结果"><thead><tr><th scope="col">输出顺序</th><th scope="col">chunk</th><th scope="col">最终分数</th><th scope="col">原因</th></tr></thead><tbody>
+            <tr><th scope="row">1</th><td>C</td><td>1.00</td><td>12 ÷ 12</td></tr>
+            <tr><th scope="row">2</th><td>B</td><td>0.50</td><td>6 ÷ 12</td></tr>
+            <tr><th scope="row">3</th><td>D</td><td>0.25</td><td>3 ÷ 12</td></tr>
+          </tbody></table></div>
+          <p class="note">A 只在 V，此模式未召回。若另一个关键词列表最大有限分数是 0.9，<strong>该列表不会除以 0.9</strong>；也不会拿本例的 12 去缩放它。最大值 &gt; 1 的分支对非有限值/非正值另有保护处理，见源码。</p>
+        </div>
+        <div class="case case-mixed" id="result-mixed">
+          <h3>两路都有：加权 RRF，依据名次而非直接相加原分</h3>
+          <p class="path">V、K 各自列表内按分数排序/去重 → <code>bestRanks</code> 取各路最佳 1 起始名次 → <code>fuseWithRRF</code> 融合并排序</p>
+          <p>默认 <code>k = 60</code>、向量权重 <code>wᵥ = 0.7</code>、关键词权重 <code>wₖ = 0.3</code>；可由租户检索配置覆盖。未出现于某路的 chunk，该路不贡献项。若一条路存在多份列表，<code>bestRanks</code> 先分别排序去重，再取该 chunk 在此路所有列表中的<strong>最小名次</strong>。</p>
+          <p class="formula"><strong>融合规则：</strong><code>score(c) = [若有 V：wᵥ/(k+rᵥ(c)) + 若有 K：wₖ/(k+rₖ(c))] ÷ [(wᵥ+wₖ)/(k+1)]</code>。分母为同时在两路排第 1 时的理论最大值；本例为 <code>(0.7+0.3)/61 = 1/61</code>。注意它<strong>不是</strong>把 BM25 12 与向量 0.84 相加。</p>
+          <div class="table-wrap"><table aria-label="双路混合 RRF 示意结果"><thead><tr><th scope="col">输出顺序</th><th scope="col">chunk</th><th scope="col">V / K 名次</th><th scope="col">归一化 RRF（约）</th><th scope="col">代入方式</th></tr></thead><tbody>
+            <tr><th scope="row">1</th><td>B</td><td>2 / 2</td><td>0.9839</td><td>(0.7/62 + 0.3/62) ÷ (1/61)</td></tr>
+            <tr><th scope="row">2</th><td>C</td><td>3 / 1</td><td>0.9778</td><td>(0.7/63 + 0.3/61) ÷ (1/61)</td></tr>
+            <tr><th scope="row">3</th><td>A</td><td>1 / 缺席</td><td>0.7000</td><td>(0.7/61) ÷ (1/61)</td></tr>
+            <tr><th scope="row">4</th><td>D</td><td>缺席 / 3</td><td>0.2905</td><td>(0.3/63) ÷ (1/61)</td></tr>
+          </tbody></table></div>
+          <p class="note">虽然 A 的向量原分最高、C 的 BM25 原分最高，<strong>同时在两路命中的 B</strong> 在此构造样例中排第一。数值保留四位小数，且只反映此示意列表；源码对同一 chunk 优先使用向量结果的元数据，融合后写入新的 RRF 分数。</p>
+        </div>
+      </div>
+    </fieldset>
+    <section aria-label="复习提纲">
+      <h2>记住这一点</h2>
+      <p>切换的是<strong>哪类检索列表存在</strong>：向量独占时保留原分；关键词独占时仅对最大有限分数 &gt; 1 的<strong>每份列表</strong>缩放；两路都有时按各路最佳名次做加权 RRF，再除理论最大值。融合不等于启用重排；重排只在明确开启后进入另一段处理。</p>
+    </section>
+    <section id="evidence">
+      <h2>源码与证据</h2>
+      <p>以当前仓库源码为准；页面表格、文本标签与所有算例为<strong>教学示意</strong>，并非线上流量、实测指标或系统运行截图。以下链接可离线从本 HTML 所在目录打开。</p>
+      <ul>
+        <li><a href="../../../internal/application/service/knowledgebase_search_fusion.go"><code>internal/application/service/knowledgebase_search_fusion.go</code></a> — <code>classifyRetrievalResults</code>（17–35）按检索器分列表；<code>fuseOrDeduplicate</code>（47–84）选择三条分支；<code>deduplicateByScore</code>（96–112）保留同一 chunk 的最高分。</li>
+        <li><a href="../../../internal/application/service/knowledgebase_search_fusion.go"><code>internal/application/service/knowledgebase_search_fusion.go</code></a> — <code>rescaleUnboundedScores</code>（114–154）逐列表检查最大有限分数是否 &gt; 1；<code>fuseWithRRF</code>（156–220）按权重、名次及理论最大值融合；<code>bestRanks</code>（222–233）每份列表分别排序后取最佳名次。</li>
+        <li><a href="../../../internal/types/retrieval_config.go"><code>internal/types/retrieval_config.go</code></a> — <code>GetEffectiveRRFK</code> 和 <code>GetEffectiveRRFWeights</code>（92–115）提供默认 k=60、向量/关键词权重 0.7/0.3；有效配置可覆盖。</li>
+        <li><a href="../../../internal/application/service/knowledgebase_search_rerank.go"><code>internal/application/service/knowledgebase_search_rerank.go</code></a> — <code>HybridSearchWithRerank</code>（57–151）仅在 <code>params.Rerank.IsEnabled()</code> 时走重排路径，未启用则直接调用 <code>HybridSearch</code>。</li>
+      </ul>
+    </section>
+  </main>
+</body>
+</html>

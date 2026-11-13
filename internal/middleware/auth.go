@@ -81,6 +81,21 @@ func isNoAuthAPI(path string, method string) bool {
 // meaningful before a user belongs to any tenant. Every other authenticated
 // route remains tenant-scoped and returns TENANT_REQUIRED when the JWT and
 // request headers do not resolve a tenant.
+// 
+// isTenantOptionalAPI 判断一个已认证的 path+method 请求能否在"未解析出
+// 租户"的情况下继续执行。这些是身份级和入驻流程类操作，必须让尚未加入
+// 任何工作区的用户也能完成：
+//
+//   - 读取/修改自己的资料、偏好、密码；
+//   - 校验或结束当前会话；
+//   - 切换工作区、创建第一个工作区、处理邀请。
+//
+// 该函数只在租户解析结果为 0 时被调用；走到这里时认证已经通过。匹配是
+// 路径与方法的精确匹配（邀请类接口是唯一的前缀匹配例外）。未列出的路由
+// 都是租户作用域：解析不出租户时返回 409 TENANT_REQUIRED。
+//
+// 白名单条目的代码必须能安全地处理 tenant_id = 0，且不得读写属于租户的
+// 数据。不要为了绕过"缺少租户"而把业务路由加进来。
 func isTenantOptionalAPI(path, method string) bool {
 	switch {
 	case path == "/api/v1/auth/me" && (method == http.MethodGet || method == http.MethodPut):
@@ -103,7 +118,16 @@ func isTenantOptionalAPI(path, method string) bool {
 		return false
 	}
 }
-
+// 调用 applyAuthSession
+// applyAuthSession 把认证会话同时写入 gin 请求的两个上下文载体：
+//
+//   - c.Keys（通过 c.Get 或接收 *gin.Context 的辅助函数读取）
+//   - c.Request.Context()（通过 types.*FromContext 系列函数读取）
+//
+// 所有认证中间件都必须经过这个辅助函数，而不是各自手写这对赋值；
+// 只在其中一个载体上设置 key 是一种隐蔽的缺陷，会表现为
+// "在 handler A 里正常，到 handler B 就失效"——具体取决于该 handler
+// 用的是哪种读取方式。
 func attachTenantlessUserContext(c *gin.Context, user *types.User) {
 	applyAuthSession(c, authSession{
 		User:        user,
@@ -133,6 +157,10 @@ func Auth(
 ) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// ignore OPTIONS request
+		// 如果是 OPTIONS 请求，就跳过
+		// 虽然 Auth 前面会有 CORS 中间件消费掉 OPTIONS 预检请求，
+		// 但是仍然会有其他是 OPTIONS 但不是预检请求的情况，
+		// 这种不属于 Auth 的业务范围，所以需要跳过
 		if c.Request.Method == http.MethodOptions {
 			c.Next()
 			return
@@ -144,9 +172,9 @@ func Auth(
 			return
 		}
 
-		// In-process dispatch (agent operations): the identity lives on the Go
-		// context, which no inbound request can carry, and is re-validated
-		// against the database exactly like a JWT session.
+		// 这里是服务器进程内部自己派发给自己的请求（用于 agent 操作）：
+		// 身份信息只存在于 Go 的 context 里 —— 外部的 HTTP 请求不可能携带它；
+		// 而且这份身份不会直接被信任，仍会像 JWT 会话那样去数据库重新核验。
 		if dispatch, ok := types.InternalDispatchFromContext(c.Request.Context()); ok {
 			if authenticateInternalDispatch(c, tenantService, userService, memberService, cfg, dispatch) {
 				c.Next()
@@ -155,9 +183,10 @@ func Auth(
 		}
 
 		// 尝试JWT Token认证
-		bearerPresented := false
+		bearerPresented := false	// bearerPresented = “Bearer（令牌）已出示/已提交”
 		if token, ok := bearerToken(c); ok {
 			bearerPresented = true
+			// 获取用户信息以及其他的激活租户
 			user, jwtTenantID, err := userService.ValidateToken(c.Request.Context(), token)
 			if err == nil && user != nil {
 				if authenticateJWTUser(c, tenantService, memberService, cfg, user, jwtTenantID) {
@@ -219,13 +248,13 @@ func authenticateInternalDispatch(
 	return authenticateJWTUser(c, tenantService, memberService, cfg, user, dispatch.TenantID)
 }
 
-// bearerToken extracts the Bearer token from the Authorization header.
+// 从请求头中的 token 去除掉 Bearer 前缀
 func bearerToken(c *gin.Context) (string, bool) {
 	authHeader := c.GetHeader("Authorization")
 	if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
 		return "", false
 	}
-	return strings.TrimPrefix(authHeader, "Bearer "), true
+	return strings.TrimPrefix(authHeader, "Bearer "), true // 删除 Bearer 前缀
 }
 
 // authenticateJWTUser finishes authentication for a validated JWT user:
@@ -233,6 +262,10 @@ func bearerToken(c *gin.Context) (string, bool) {
 // active membership), resolves the caller's role inside that tenant, and
 // attaches the session context. Returns true when the request may proceed;
 // on false the response has already been written and the request aborted.
+// authenticateJWTUser 为已通过 JWT 校验的用户完成认证收尾：
+// 解析目标租户（X-Tenant-ID 切换 / JWT claim / 首个有效成员关系），
+// 解析调用者在该租户内的角色，并写入会话上下文。
+// 返回 true 表示请求可以继续；返回 false 时响应已经写出、请求已被中止。
 func authenticateJWTUser(
 	c *gin.Context,
 	tenantService interfaces.TenantService,
@@ -321,6 +354,33 @@ func authenticateJWTUser(
 // header, inaccessible or missing target tenant). targetTenantID == 0 with
 // ok=true means "authenticated but no usable workspace" — the caller decides
 // between tenantless routes and TENANT_REQUIRED.
+// 
+// resolveTargetTenant 决定这次请求在哪个租户下执行，并告知调用方是否已顺带
+// 取到租户记录。
+//
+// 解析顺序：
+//
+//  1. jwtTenantID —— token 签发时绑定的租户（登录或 /auth/switch-tenant）。
+//     若为 0，退回 user.TenantID（主租户）；租户级 RBAC 之前签发的 token
+//     依赖这层兜底。
+//  2. 请求头 X-Tenant-ID 如果存在，会覆盖上面的结果。它必须能解析为正整数
+//     （否则 400）；用户必须有权访问——主租户、跨租户超管、或 tenant_members
+//     中的 active 记录（否则 403）；租户还必须存在（否则 400）。这条路径
+//     会顺带查出租户，因此一并返回，调用方无需重复查询。
+//  3. 如果结果仍为 0（无主租户用户），取第一条 active 的成员关系，使已有
+//     JWT 在邀请被接受后立即可用（见 resolveFirstMembershipTarget）。
+//
+// 返回值：
+//   - targetTenantID：本次请求的目标租户。为 0 且 ok=true 表示"已认证但
+//     没有可用工作区"，由调用方决定走 tenantless 路由还是返回 TENANT_REQUIRED。
+//   - tenant：仅当走 X-Tenant-ID 路径时非 nil；其它路径调用方需自行查询。
+//   - crossTenantSwitch：targetTenantID != user.TenantID，表示请求离开了
+//     主租户；供角色解析使用。
+//   - ok：false 表示响应已经写好（header 非法、无权限、租户不存在），
+//     调用方必须立即停止。
+//
+// 本函数只读：不写数据库、不修改 gin context；会话写入由后续的
+// applyAuthSession 完成。
 func resolveTargetTenant(
 	c *gin.Context,
 	tenantService interfaces.TenantService,
@@ -334,10 +394,13 @@ func resolveTargetTenant(
 	// 默认 target = JWT 里的 tenant_id（来自登录或 /auth/switch-tenant），
 	// 兼容 ValidateToken 的 fallback：claim 缺失时 jwtTenantID == user.TenantID。
 	targetTenantID = jwtTenantID
+	// 它是一层兜底——当上游没给出租户（jwtTenantID == 0）时，用用户的主租户补上，避免把"有主租户的用户"误判成"无工作区"。
 	if targetTenantID == 0 {
 		targetTenantID = user.TenantID
 	}
 
+	// X-Tenant-ID 是一个自定义 HTTP 请求头，值是工作区（租户）ID 的十进制字符串，是本次生效的租户 ID
+	// 也就是想要请求访问的租户ID
 	if tenantHeader := c.GetHeader("X-Tenant-ID"); tenantHeader != "" {
 		// 解析目标空间ID。畸形 / 零值必须显式拒绝：静默忽略会让坏掉的
 		// 前端/SDK 悄悄写错空间，反而看不到问题。与 RequirePathTenantMatch
@@ -346,7 +409,7 @@ func resolveTargetTenant(
 		if err != nil || parsedTenantID == 0 {
 			logger.Warnf(ctx, "Invalid X-Tenant-ID header from user=%s: %q (err=%v)", user.ID, tenantHeader, err)
 			c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid X-Tenant-ID header"})
-			c.Abort()
+			c.Abort() // 终止 gin 的中间件链：后面的中间件和 handler 都不会再执行
 			return 0, nil, false, false
 		}
 		// 检查用户是否有权限访问目标空间：自家空间、跨空间超管、或

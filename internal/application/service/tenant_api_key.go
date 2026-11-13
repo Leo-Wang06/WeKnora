@@ -102,18 +102,30 @@ func (s *tenantAPIKeyService) AuthenticateAPIKey(ctx context.Context, token stri
 	return key, nil
 }
 
-// touchAPIKeyLastUsedAsync persists last_used_at at most once per key per
-// apiKeyLastUsedMinInterval. The write runs in a detached goroutine so auth
-// latency is not tied to an UPDATE on the hot path.
+// touchAPIKeyLastUsedAsync 异步更新 API Key 的 last_used_at，
+// 但保证同一个 Key 每个 apiKeyLastUsedMinInterval（1 分钟）最多写一次库。
+//
+// 认证是高频热路径，而前端只需要分钟级的"最后使用"精度，因此：
+//   - 先在内存节流表 lastUsedTouch 中检查/记录时间，窗口内的请求直接返回；
+//   - 通过独立 goroutine 写库，认证延迟不依赖这次 UPDATE；
+//   - 使用 context.Background()，即使原请求已取消，使用记录仍会写入；
+//   - 写库失败时删除节流记录，让下一次请求可以重试。
+//
+// 节流表只存在于进程内存中，重启即清空；多副本部署时每个实例各自节流，
+// 最坏情况下每个 Key 每分钟最多产生"副本数"次写入。
 func (s *tenantAPIKeyService) touchAPIKeyLastUsedAsync(keyID uint64) {
 	now := time.Now().UTC()
+	// 1.距离上次写库不足 1 分钟 -> 直接跳过
 	if v, ok := s.lastUsedTouch.Load(keyID); ok {
 		if now.Sub(v.(time.Time)) < apiKeyLastUsedMinInterval {
 			return
 		}
 	}
+	// 2.先记录本次写入时间（并发请求也会看到，从而一并跳过）
 	s.lastUsedTouch.Store(keyID, now)
+	// 3.后台 goroutine 写库，不阻塞认证
 	go func(id uint64, at time.Time) {
+		// 写库操作
 		if err := s.repo.UpdateAPIKeyLastUsed(context.Background(), id, at); err != nil {
 			logger.Warnf(context.Background(),
 				"failed to update tenant api key last_used_at (id=%d): %v", id, err)

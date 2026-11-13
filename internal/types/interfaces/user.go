@@ -68,6 +68,23 @@ type UserService interface {
 	// honour /auth/switch-tenant sessions that were minted with a
 	// non-home tenant. Falls back to user.TenantID when the claim is
 	// missing (old tokens issued before tenant-level RBAC).
+	// 
+	// ValidateToken 校验 access token，返回 token 所属的用户以及该 token 绑定的租户。
+	//
+	// 校验内容：
+	//  1. 签名算法必须是 HMAC 家族（防算法混淆），签名和有效期由 jwt.Parse 校验；
+	//  2. 不能是 refresh token，也不能是 sandbox 终端票据；
+	//  3. auth_tokens 表中必须存在该 token 且未被吊销；
+	//  4. 用户必须存在且启用——以数据库为准，令牌有效不等于账号可用。
+	//
+	// 第二个返回值是 token 中 tenant_id claim 声明的激活租户，可能因
+	// /auth/switch-tenant 而不同于 user.TenantID；老 token 没有该 claim 时
+	// 回退到 user.TenantID。
+	//
+	// 本函数不做授权判断：不校验成员关系、角色，也不校验租户是否存在。
+	// 这些由认证中间件负责，且中间件可能用 X-Tenant-ID 覆盖这里返回的租户。
+	//
+	// 查询 token/user 记录失败会作为基础设施错误返回，不会伪装成"已吊销"。
 	ValidateToken(ctx context.Context, token string) (*types.User, uint64, error)
 	// GetAccessTokenByValue looks up the stored access-token row for a JWT
 	// string. The Token field is redacted. Used to bind a sandbox-terminal

@@ -3,6 +3,8 @@ package types
 // SharedAgentKBScope describes the KBs exposed by an already-authorized shared
 // agent. It is not proof that a caller can use that agent. The zero value, an
 // unknown selection mode, and an empty selection all deny access.
+// 
+// 共享agent的作用域范围
 type SharedAgentKBScope struct {
 	tenantID uint64
 	all      bool

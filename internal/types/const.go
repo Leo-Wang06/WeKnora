@@ -4,124 +4,116 @@ package types
 type ContextKey string
 
 const (
-	// TenantIDContextKey scopes execution (repository/model queries).
+	// TenantIDContextKey 限定执行范围（仓储/模型查询按它做租户隔离）。
 	TenantIDContextKey ContextKey = "TenantID"
-	// CallerContextKey captures the authenticated resource caller.
+	// CallerContextKey 记录已认证的资源调用方（租户、用户、角色）。
 	CallerContextKey ContextKey = "ResourceCaller"
-	// KBGrantsContextKey carries immutable operation grants.
+	// KBGrantsContextKey 携带不可变的知识库操作授权（已解析好的访问许可）。
 	KBGrantsContextKey ContextKey = "ResourceKBGrants"
-	// KBTransferContextKey carries one admitted resource pair.
+	// KBTransferContextKey 携带一组已准入的资源对（知识库转移/复制场景）。
 	KBTransferContextKey ContextKey = "ResourceKBTransfer"
-	// SharedAgentGrantContextKey carries an authorized agent read scope.
+	// SharedAgentGrantContextKey 携带已授权的共享 Agent 读取范围。
 	SharedAgentGrantContextKey ContextKey = "ResourceSharedAgentGrant"
-	// TenantInfoContextKey is the context key for tenant information
+	// TenantInfoContextKey 是当前租户信息（*types.Tenant）。
 	TenantInfoContextKey ContextKey = "TenantInfo"
-	// RequestIDContextKey is the context key for request ID
+	// RequestIDContextKey 是请求 ID，用于串联一次请求产生的所有日志。
 	RequestIDContextKey ContextKey = "RequestID"
-	// LoggerContextKey is the context key for logger
+	// LoggerContextKey 携带请求级 logger（通常带 request_id 等字段）。
 	LoggerContextKey ContextKey = "Logger"
-	// UserContextKey is the context key for user information
+	// UserContextKey 是当前用户信息（*types.User）。
 	UserContextKey ContextKey = "User"
-	// UserIDContextKey is the context key for user ID
+	// UserIDContextKey 是当前用户 ID。
 	UserIDContextKey ContextKey = "UserID"
-	// PrincipalContextKey is the context key for the terminal caller principal.
+	// PrincipalContextKey 是终端调用主体（Principal），标识调用方类型与 ID。
 	PrincipalContextKey ContextKey = "Principal"
-	// PrincipalAuthSourceContextKey records how the auth middleware verified
-	// the principal (web session, API key mode, embed, IM, MCP endpoint).
+	// PrincipalAuthSourceContextKey 记录认证中间件是如何验证该主体的
+	// （Web 会话、API Key 模式、Embed、IM、MCP 端点）。
 	PrincipalAuthSourceContextKey ContextKey = "PrincipalAuthSource"
-	// TenantAPIKeyScopeContextKey carries per-API-key operation and KB scopes.
+	// TenantAPIKeyScopeContextKey 携带当前 API Key 的操作能力与知识库范围。
 	TenantAPIKeyScopeContextKey ContextKey = "TenantAPIKeyScope"
-	// AuditAPIKeyContextKey carries the API key id/name for activity
-	// attribution only. It is not an authorization grant.
+	// AuditAPIKeyContextKey 携带 API Key 的 ID/名称，仅用于活动归属，
+	// 不是授权凭证。
 	AuditAPIKeyContextKey ContextKey = "AuditAPIKey"
-	// TenantRoleContextKey is the context key for the caller's TenantRole
-	// in the currently active tenant (loaded by the auth middleware from
-	// the tenant_members table). See TenantRoleFromContext.
+	// TenantRoleContextKey 是调用者在当前激活租户中的角色
+	// （由认证中间件从 tenant_members 表加载）。见 TenantRoleFromContext。
 	TenantRoleContextKey ContextKey = "TenantRole"
-	// SessionTenantIDContextKey is the context key for session owner's tenant ID.
-	// When set (e.g. in pipeline with shared agent), session/message lookups use this instead of TenantIDContextKey.
+	// SessionTenantIDContextKey 是会话所属租户的 ID。设置后（例如共享 Agent
+	// 的流水线场景），会话/消息查询使用它而不是 TenantIDContextKey。
 	SessionTenantIDContextKey ContextKey = "SessionTenantID"
-	// SessionIDContextKey carries the current session ID through the chat pipeline
-	// so that stateful sandbox backends (notably CubeSandbox) can route script
-	// execution to the persistent, per-session MicroVM instance.
+	// SessionIDContextKey 携带当前会话 ID，贯穿聊天流水线，
+	// 使有状态的沙箱后端（尤其是 CubeSandbox）能把脚本执行路由到
+	// 该会话专属的持久 MicroVM 实例。
 	SessionIDContextKey ContextKey = "SessionID"
-	// SandboxTenantIDContextKey carries the tenant that owns the session whose
-	// sandbox is being addressed, which is NOT always the tenant in
-	// TenantIDContextKey: a shared agent runs under the agent owner's tenant so
-	// that models/KBs/named sandbox configs resolve in the sharing workspace.
+	// SandboxTenantIDContextKey 携带被访问沙箱所属会话的租户 ID；
+	// 它不总是等于 TenantIDContextKey 中的租户：共享 Agent 运行在
+	// Agent 所有者的租户下，以便模型/知识库/命名沙箱配置在共享工作区中解析。
 	//
-	// The session→sandbox binding must stay keyed by the session owner instead,
-	// because session deletion tears the sandbox down from a plain HTTP request
-	// that only ever knows the session's own tenant. Keying the binding on the
-	// borrowed tenant would leave that teardown looking up a key nobody wrote,
-	// abandoning a paused MicroVM that keeps billing. It is deliberately a
-	// distinct key from SessionTenantIDContextKey, which also re-scopes
-	// session/message repository lookups. See SandboxTenantIDFromContext.
+	// 会话→沙箱的绑定必须仍然以会话所有者为准，因为会话删除是从一个
+	// 普通 HTTP 请求触发的，而该请求只认识会话自己的租户。若把绑定键在
+	// “借来的”租户上，删除时就会去查一个没人写过的键，导致暂停的 MicroVM
+	// 被遗弃并持续计费。它刻意与 SessionTenantIDContextKey 区分——后者
+	// 还会重新限定会话/消息的仓储查询。见 SandboxTenantIDFromContext。
 	SandboxTenantIDContextKey ContextKey = "SandboxTenantID"
-	// SandboxAdmissionExemptContextKey carries the shared-machine admission
-	// members of the current request and its chat turn ([]string).
+	// SandboxAdmissionExemptContextKey 携带当前请求及其聊天轮次中、
+	// 免于共享机器准入限制的成员（[]string）。
 	SandboxAdmissionExemptContextKey ContextKey = "sandbox_admission_exempt"
-	// EmbedQueryContextKey marks an embedding call as a search query; see
-	// WithEmbedQuery.
+	// EmbedQueryContextKey 标记一次向量化调用是“搜索查询”；
+	// 见 WithEmbedQuery。
 	EmbedQueryContextKey ContextKey = "EmbedQuery"
-	// WikiEditSourceContextKey carries who is authoring the current wiki
-	// page write (user / agent / revert). Absent means the wiki ingest
-	// pipeline. See types.WithWikiEditSource.
+	// WikiEditSourceContextKey 携带当前 Wiki 页面写入的作者来源
+	// （user / agent / revert）。不存在时表示来自 Wiki 摄取流水线。
+	// 见 types.WithWikiEditSource。
 	WikiEditSourceContextKey ContextKey = "WikiEditSource"
-	// WikiShrinkAllowedContextKey marks one wiki page write as allowed to
-	// remove table rows the stored page still has; see
-	// types.WithWikiShrinkAllowed.
+	// WikiShrinkAllowedContextKey 标记本次 Wiki 页面写入允许删除
+	// 已存页面中仍然存在的表格行；见 types.WithWikiShrinkAllowed。
 	WikiShrinkAllowedContextKey ContextKey = "WikiShrinkAllowed"
-	// LanguageContextKey is the context key for user language preference (e.g. "zh-CN", "en-US")
+	// LanguageContextKey 是用户语言偏好（例如 "zh-CN"、"en-US"）。
 	LanguageContextKey ContextKey = "Language"
-	// EmbedVisitorContextKey is the anonymous visitor id for embed OAuth isolation.
+	// EmbedVisitorContextKey 是 Embed 场景下用于 OAuth 隔离的匿名访客 ID。
 	EmbedVisitorContextKey ContextKey = "EmbedVisitorID"
-	// EmbedChannelContextKey stores the authenticated embed channel (an
-	// *EmbedChannel) on the request context. Declared here rather than in the
-	// middleware that authenticates it, for the same reason as
-	// LangfuseTraceContextKey: the clone table in context_clone.go has to name
-	// every context key, and middleware imports this package, so a key
-	// declared there could only be referred to by its raw string value.
+	// EmbedChannelContextKey 在请求 context 上保存已认证的 Embed 渠道
+	// （*EmbedChannel）。之所以在这里声明而不在认证它的中间件包里，
+	// 原因同 LangfuseTraceContextKey：context_clone.go 的克隆表必须
+	// 逐一声明所有 context key，而 middleware 包会 import 本包，
+	// 若 key 定义在 middleware 里，克隆表就只能用原始字符串引用它。
 	EmbedChannelContextKey ContextKey = "EmbedChannel"
-	// MCPEndpointContextKey stores the authenticated *MCPEndpoint on the
-	// request context of a call arriving on the workspace MCP server surface.
-	// Declared here for the same reason as EmbedChannelContextKey.
+	// MCPEndpointContextKey 在通过工作区 MCP Server 接口到达的请求
+	// context 上保存已认证的 *MCPEndpoint。声明位置的理由同
+	// EmbedChannelContextKey。
 	MCPEndpointContextKey ContextKey = "MCPEndpoint"
-	// LangfuseTraceContextKey carries the active Langfuse *Trace across the
-	// request lifecycle. Defined here (not inside the langfuse package) so
-	// that logger.CloneContext can preserve it without importing langfuse.
+	// LangfuseTraceContextKey 携带请求生命周期中活跃的 Langfuse *Trace。
+	// 定义在这里（而不是 langfuse 包内），使 logger.CloneContext
+	// 无需 import langfuse 也能保留它。
 	LangfuseTraceContextKey ContextKey = "LangfuseTrace"
-	// SystemAdminContextKey is the context key indicating whether the user is a system administrator
+	// SystemAdminContextKey 表示当前用户是否为系统管理员。
 	SystemAdminContextKey ContextKey = "SystemAdmin"
-	// BackgroundTaskContextKey marks a context whose model calls originate from
-	// an asynq background worker (document parse / summary / question / graph /
-	// multimodal enrichment) rather than a user-facing HTTP request. The chat
-	// concurrency governor uses this to throttle only background LLM traffic,
-	// leaving interactive chat latency untouched. See WithBackgroundTask.
+	// BackgroundTaskContextKey 标记该 context 中的模型调用来自 asynq
+	// 后台 worker（文档解析/摘要/问题生成/图谱/多模态增强），而不是
+	// 面向用户的 HTTP 请求。聊天并发控制器据此只限制后台 LLM 流量，
+	// 不影响交互式聊天的延迟。见 WithBackgroundTask。
 	BackgroundTaskContextKey ContextKey = "BackgroundTask"
-	// LLMCallPurposeContextKey labels the product-level reason for a model
-	// request (for example agent_round or wiki_page_modify).
+	// LLMCallPurposeContextKey 标注模型请求在业务层面的用途
+	// （例如 agent_round 或 wiki_page_modify）。
 	LLMCallPurposeContextKey ContextKey = "LLMCallPurpose"
-	// LLMPromptPrefixFingerprintContextKey carries a non-sensitive hash of the
-	// intended reusable prompt prefix for cache diagnostics.
+	// LLMPromptPrefixFingerprintContextKey 携带计划复用的提示词前缀的
+	// 非敏感哈希，用于缓存诊断。
 	LLMPromptPrefixFingerprintContextKey ContextKey = "LLMPromptPrefixFingerprint"
-	// MCPOAuthNonInteractiveContextKey marks a request whose channel cannot
-	// resolve an in-conversation MCP OAuth prompt (e.g. an IM bot: there is no
-	// live client to click "Authorize" and call the resolve endpoint). When set,
-	// the agent emits a one-shot authorization notice and continues instead of
-	// blocking until the OAuth wait times out. See IsMCPOAuthNonInteractive.
+	// MCPOAuthNonInteractiveContextKey 标记该请求所在的渠道无法在会话内
+	// 完成 MCP OAuth 授权（例如 IM 机器人：没有活跃客户端能点击“授权”
+	// 并调用 resolve 端点）。设置后，Agent 会发一条一次性授权提示并继续
+	// 执行，而不是阻塞到 OAuth 等待超时。见 IsMCPOAuthNonInteractive。
 	MCPOAuthNonInteractiveContextKey ContextKey = "MCPOAuthNonInteractive"
-	// RunModeContextKey carries the RunMode of the agent run. See
-	// RunModeFromContext.
+	// RunModeContextKey 携带 Agent 运行的 RunMode。见 RunModeFromContext。
 	RunModeContextKey ContextKey = "RunMode"
-	// AccessLevelContextKey carries the agent run's effective access level.
+	// AccessLevelContextKey 携带 Agent 运行的有效访问级别。
 	AccessLevelContextKey ContextKey = "AccessLevel"
-	// GrantScopeContextKey carries the GrantScope of the agent run.
+	// GrantScopeContextKey 携带 Agent 运行的 GrantScope。
 	GrantScopeContextKey ContextKey = "GrantScope"
-	// StandingGrantScopeContextKey carries the standing GrantScope of an agent run; see WithStandingGrantScope.
+	// StandingGrantScopeContextKey 携带 Agent 运行的常驻（standing）
+	// GrantScope；见 WithStandingGrantScope。
 	StandingGrantScopeContextKey ContextKey = "StandingGrantScope"
-	// ChatParserEngineContextKey carries the resolved parser engine
-	// from the agent's ChatParserEngineRules for chat attachment processing.
+	// ChatParserEngineContextKey 携带从 Agent 的 ChatParserEngineRules
+	// 解析出的解析引擎，用于聊天附件处理。
 	ChatParserEngineContextKey ContextKey = "ChatParserEngine"
 )
 

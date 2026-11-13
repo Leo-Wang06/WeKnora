@@ -20,9 +20,9 @@ func DefaultLanguage() string {
 	return "zh-CN"
 }
 
-// TenantIDFromContext extracts the execution tenant ID from ctx.
-// Authorization should use CallerFromContext instead.
-// Returns (0, false) when the key is absent or the value is not uint64.
+// TenantIDFromContext 从 ctx 中取出执行租户 ID。
+// 授权判断应改用 CallerFromContext。
+//  当 key 不存在、或值的类型不是 uint64 时，返回 (0, false)。
 func TenantIDFromContext(ctx context.Context) (uint64, bool) {
 	v, ok := ctx.Value(TenantIDContextKey).(uint64)
 	return v, ok
