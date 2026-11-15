@@ -11,37 +11,74 @@ import (
 	"gorm.io/gorm"
 )
 
-// TenantAPIKey is a revocable machine credential. Tenant-scoped and platform
-// keys intentionally share one table; platform keys have tenant_id=NULL and
-// choose a target workspace per request. KeyHash is used for authentication
-// lookup; APIKey is stored encrypted when SYSTEM_AES_KEY is set.
+// TenantAPIKey 是 API Key 的数据库模型，表示一把可撤销的机器凭证。
+//
+// 租户 Key 与平台 Key 共用同一张表，靠 ScopeType 区分：
+//   - tenant：绑定 TenantID 指向的工作区，只能在该工作区内操作；
+//   - platform：TenantID 为 NULL，调用时通过 X-Tenant-ID 指定目标工作区，
+//     且必须逐项授予 Capabilities，不允许 FullAccess。
+//
+// 认证时按 KeyHash（明文 Key 的 SHA-256）查库；APIKey 保存用于界面展示的
+// 明文，配置 SYSTEM_AES_KEY 后由 BeforeSave 加密、AfterFind 解密。
+// 让程序也可以使用 WeKnora,
+// WeKnora 原本的访问方式是给人用的：浏览器登录 → 拿 JWT → 调接口。
+//
+// 但很多使用方根本不是人，而是程序：
 type TenantAPIKey struct {
-	ID               uint64          `json:"id" gorm:"primaryKey;autoIncrement"`
-	TenantID         *uint64         `json:"tenant_id,omitempty" gorm:"index"`
-	ScopeType        APIKeyScopeType `json:"scope_type" gorm:"type:varchar(16);not null;default:tenant;index"`
-	Name             string          `json:"name" gorm:"type:varchar(128);not null"`
-	KeyHash          string          `json:"-" gorm:"type:varchar(64);not null;uniqueIndex"`
-	APIKey           string          `json:"api_key" gorm:"column:api_key;type:text;not null;default:''"`
-	FullAccess       bool            `json:"full_access" gorm:"not null;default:false"`
-	KnowledgeBaseIDs StringArray     `json:"knowledge_base_ids" gorm:"type:jsonb;not null;default:'[]'"`
+	// ID 是自增主键。
+	ID uint64 `json:"id" gorm:"primaryKey;autoIncrement"`
+	// TenantID 是 Key 归属的工作区 ID。
+	// 平台级 Key 不绑定工作区，此字段为 nil（数据库存 NULL）。
+	TenantID *uint64 `json:"tenant_id,omitempty" gorm:"index"`
+	// ScopeType 区分 Key 的作用域：
+	//   - tenant：绑定某个工作区，只能在该工作区内使用；
+	//   - platform：不绑定工作区，调用时用 X-Tenant-ID 指定目标工作区。
+	// 未知值在 NormalizeAPIKeyScopeType 中按 tenant 处理。
+	ScopeType APIKeyScopeType `json:"scope_type" gorm:"type:varchar(16);not null;default:tenant;index"`
+	// Name 是创建者填写的名称，仅用于展示和区分不同 Key。
+	Name string `json:"name" gorm:"type:varchar(128);not null"`
+	// KeyHash 是明文 Key 的 SHA-256 十六进制摘要，认证时按此列查询。
+	// json:"-" 保证它永远不会出现在 API 响应里。
+	KeyHash string `json:"-" gorm:"type:varchar(64);not null;uniqueIndex"`
+	// APIKey 是明文 Key（sk- 开头），用于管理界面展示。
+	// 配置 SYSTEM_AES_KEY 后，由 BeforeSave 加密落库、AfterFind 解密。
+	APIKey string `json:"api_key" gorm:"column:api_key;type:text;not null;default:''"`
+	// FullAccess 为 true 表示该 Key 拥有工作区的全部权限；
+	// 此时 Capabilities 和 KnowledgeBaseIDs 会被清空。
+	FullAccess bool `json:"full_access" gorm:"not null;default:false"`
+	// KnowledgeBaseIDs 是允许访问的知识库白名单。
+	// 空数组表示不限制，即该 Key 可访问工作区内所有知识库。
+	KnowledgeBaseIDs StringArray `json:"knowledge_base_ids" gorm:"type:jsonb;not null;default:'[]'"`
+	// Capabilities 是细粒度能力列表，用于非全权限的 Key。
+	// 每项能力对应一类集成用途（检索、聊天、写入、空间基础设施管理等）；
+	// FullAccess=false 时至少需要一项。
+	// 当路由目标是知识库时，KnowledgeBaseIDs 的范围限制仍会叠加生效。
+	//
 	// Capabilities are bounded grants for non-full-access keys. Each
 	// capability maps to an integration persona (retrieval, chat, ingest,
 	// tenant infrastructure management, and history access). KB scoping
 	// (KnowledgeBaseIDs) still applies on top where a route targets knowledge
 	// bases.
 	Capabilities StringArray `json:"capabilities" gorm:"type:jsonb;not null;default:'[]'"`
-	LastUsedAt   *time.Time  `json:"last_used_at,omitempty"`
-	ExpiresAt    *time.Time  `json:"expires_at,omitempty"`
-	RevokedAt    *time.Time  `json:"revoked_at,omitempty" gorm:"index"`
-	CreatedAt    time.Time   `json:"created_at"`
-	UpdatedAt    time.Time   `json:"updated_at"`
+	// LastUsedAt 是最近一次认证成功的时间；nil 表示从未使用。
+	// 由 service 层按分钟级节流异步更新，避免每次请求都写库。
+	LastUsedAt *time.Time `json:"last_used_at,omitempty"`
+	// ExpiresAt 是过期时间；nil 表示永不过期。
+	ExpiresAt *time.Time `json:"expires_at,omitempty"`
+	// RevokedAt 是撤销时间；nil 表示有效，非 nil 表示已停用。
+	// 撤销采用软删除：只写时间戳，记录本身保留。
+	RevokedAt *time.Time `json:"revoked_at,omitempty" gorm:"index"`
+	// CreatedAt 是创建时间，由 GORM 自动维护。
+	CreatedAt time.Time `json:"created_at"`
+	// UpdatedAt 是最后更新时间，由 GORM 自动维护。
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 type APIKeyScopeType string
 
 const (
-	APIKeyScopeTenant   APIKeyScopeType = "tenant"
-	APIKeyScopePlatform APIKeyScopeType = "platform"
+	APIKeyScopeTenant   APIKeyScopeType = "tenant" // 空间级 API Key
+	APIKeyScopePlatform APIKeyScopeType = "platform" // 平台级 API Key
 )
 
 // NormalizeAPIKeyScopeType 是把类型字符串规整成 tenant 或 platform，
@@ -49,7 +86,7 @@ const (
 // tenant 绑定并局限于一个工作区；
 // platform 不绑定工作区、可跨租户操作，
 // 但被强制要求逐项 capability 授权且不能全权限。
-// 返回 SopeType 
+// 返回 SopeType
 func NormalizeAPIKeyScopeType(scope APIKeyScopeType) APIKeyScopeType {
 	switch APIKeyScopeType(strings.ToLower(strings.TrimSpace(string(scope)))) {
 	case APIKeyScopePlatform:
@@ -59,6 +96,7 @@ func NormalizeAPIKeyScopeType(scope APIKeyScopeType) APIKeyScopeType {
 	}
 }
 
+// 检查此 APIKey 的作用域范围，是否为 Platform
 func (k *TenantAPIKey) IsPlatform() bool {
 	return k != nil && NormalizeAPIKeyScopeType(k.ScopeType) == APIKeyScopePlatform
 }
@@ -380,7 +418,7 @@ func (s TenantAPIKeyScope) AllowsKnowledgeBases(kbIDs []string) bool {
 	// 遍历要访问的 kbIDs
 	// 要求"全部包含"，而不是"任一命中"：只要有一个越界就拒绝
 	for _, kbID := range kbIDs {
-		// 
+		//
 		if !s.AllowsKnowledgeBase(kbID) {
 			return false
 		}
@@ -407,7 +445,7 @@ func normalizeIDArray(in StringArray) StringArray {
 
 // AuthorizeTenantAPIKeyKnowledgeBases rejects KB-restricted API key callers that
 // target one or more knowledge bases outside their allow-list.
-// 
+//
 // AuthorizeTenantAPIKeyKnowledgeBases 校验 API Key 调用方是否有权访问
 // 指定的知识库：kbIDs 中只要有任何一个不在 Key 的知识库白名单内，就返回 403。
 //

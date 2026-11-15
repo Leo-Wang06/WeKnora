@@ -40,16 +40,21 @@ func IsAPISessionOwnerID(ownerID string) bool {
 		strings.HasPrefix(ownerID, SessionOwnerAPIExternalUserPrefix)
 }
 
-// Principal represents the terminal caller for per-subject isolation features.
-// It is intentionally separate from UserID: many principals, such as IM users
-// or embed visitors, are not WeKnora accounts and must not imply RBAC rights.
+// Principal 表示一次请求的最终调用主体，用于按主体做数据隔离。
+//
+// 它有意与 UserID 分开：IM 用户、嵌入访客、API Key 等主体并不是 WeKnora
+// 账号，不能也不应因此获得 RBAC 权限。Type 与 ID 共同构成 StorageID
+// （"type:id"），在会话归属等场景作为隔离键。
 type Principal struct {
+	// Type 是主体类型，如 web_user、api_tenant、api_platform、
+	// api_external_user、im_user、embed_*、mcp_endpoint。
 	Type string
+	// ID 是主体在该类型下的标识。不同 Type 的 ID 可能重复，
+	// 因此必须和 Type 一起使用，不能单独当作全局唯一 ID。
 	ID   string
-	// ActingVia names what acts for this principal without them present,
-	// e.g. "automation:<id>". Empty when the principal acts in person. It
-	// does not change who is authorized or StorageID: the principal still
-	// owns the run and answers its approvals.
+	// ActingVia 记录「主体不在场时，谁在替它执行」，如 "automation:<id>"。
+	// 为空表示主体本人操作。它不改变授权主体，也不参与 StorageID：
+	// 本次运行仍归 Type+ID 所有，审批也由它负责。
 	ActingVia string
 }
 
@@ -66,6 +71,8 @@ func (p Principal) Valid() bool {
 	return p.Type != "" && p.ID != ""
 }
 
+// 拼接 p.Type + ":" + p.ID 用来当作其 ID,
+// 主要是用来区分用户 ID
 func (p Principal) StorageID() string {
 	p = p.Normalize()
 	if !p.Valid() {

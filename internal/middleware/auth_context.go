@@ -7,36 +7,33 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// authSession is the resolved identity an auth middleware attaches to the
-// request. One struct + one apply function replaces the five near-identical
-// "c.Set + context.WithValue" blocks that used to live in the JWT branch,
-// the tenantless branch, both API-key attach helpers and EmbedAuth — keeping
-// the gin-keys surface (c.Keys) and the request-context surface in lockstep
-// is exactly the invariant that was easy to break when each caller wrote the
-// pairs out by hand.
+// authSession 是认证中间件附加到请求上的、已解析的身份。
+// 作用就是统一所有请求的结构体。
+// 一个结构体 + 一个 apply 函数，取代了过去分散在 JWT 分支、无租户分支、
+// 两个 API Key 附加辅助函数以及 EmbedAuth 中的五处近乎重复的
+// "c.Set + context.WithValue" 代码块——当每个调用方各写一遍时，
+// 保持 gin 的 c.Keys 与 request.Context() 两个读取面同步，正是最容易被破坏的不变量。
 type authSession struct {
-	// User is the authenticated (possibly synthetic) user. Required.
+	// User 是已认证（可能是合成）的用户，必填。
 	User      *types.User
 	Principal types.Principal
-	// TenantID / Tenant scope the request to a workspace. TenantID == 0 means
-	// a tenantless session (identity-level routes only) and attaches neither
-	// key. Tenant may be nil even when TenantID is set (not expected today,
-	// but the helper stays tolerant).
+	// TenantID / Tenant 把请求限定到某个空间。TenantID == 0 表示无租户会话
+	// （仅用于身份级路由），两个 key 都不会写入。即使 TenantID 有值，
+	// Tenant 也可能为 nil（目前不应出现，但辅助函数保持容忍）。
 	TenantID uint64
 	Tenant   *types.Tenant
-	// Role is the caller's resolved role inside TenantID. Empty string means
-	// "attach no role key" (tenantless sessions); readers then fall back to
-	// TenantRoleFromContext's fail-closed Viewer default.
+	// Role 是调用者在 TenantID 内的角色。空字符串表示「不写入角色 key」
+	// （无租户会话）；读取方会回退到 TenantRoleFromContext 的
+	// fail-closed 默认值 Viewer。
 	Role        types.TenantRole
 	SystemAdmin bool
-	// APIKeyScope marks machine principals; the APIKeyGate authorizes them
-	// per-route from this scope.
+	// APIKeyScope 标记机器主体；APIKeyGate 依据它在每个路由上做授权。
 	APIKeyScope *types.TenantAPIKeyScope
-	// Extra carries surface-specific context values (e.g. the authenticated
-	// embed channel) that must be visible on both surfaces like the rest.
+	// Extra 携带与具体入口相关的上下文值（例如已认证的 embed 渠道），
+	// 它们和其余字段一样，必须在两个读取面上都可见。
 	Extra map[types.ContextKey]any
-	// AuthSource is how Principal was verified (types.AuthSource*). Required
-	// for every principal-bearing session.
+	// AuthSource 是 Principal 的验证方式（types.AuthSource*）。
+	// 每个带主体的会话都必须设置。
 	AuthSource string
 }
 
@@ -50,7 +47,7 @@ type authSession struct {
 // the pairs; a key set on only one surface is a latent bug that surfaces as
 // "works in handler A, broken in handler B" depending on which read style
 // the handler uses.
-// 
+//
 // applyAuthSession 把认证会话同时写入 gin 请求的两个上下文载体：
 //
 //   - c.Keys（通过 c.Get 或接收 *gin.Context 的辅助函数读取）

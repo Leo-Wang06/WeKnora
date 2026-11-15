@@ -82,53 +82,58 @@ func GetDefaultRetrieverEngines() []RetrieverEngineParams {
 	return result
 }
 
-// Tenant represents the tenant
+// Tenant 表示空间（租户/工作空间），是所有业务数据的隔离边界。
+// 注意：它不是「共享空间」——共享空间对应 Organization 类型。
 type Tenant struct {
-	// ID
+	// ID 是主键。
 	ID uint64 `yaml:"id"                  json:"id"                  gorm:"primaryKey"`
-	// Name
+	// Name 是空间名称。
 	Name string `yaml:"name"                json:"name"`
-	// Description
+	// Description 是空间描述。
 	Description string `yaml:"description"         json:"description"`
-	// Status
+	// Status 是空间状态，默认 active。
 	Status string `yaml:"status"              json:"status"              gorm:"default:'active'"`
-	// Retriever engines
+	// RetrieverEngines 是检索/向量引擎配置。
 	RetrieverEngines RetrieverEngines `yaml:"retriever_engines"   json:"retriever_engines"   gorm:"type:json"`
-	// Business
+	// Business 是业务标识/行业。
 	Business string `yaml:"business"            json:"business"`
-	// Storage quota (Bytes), default is 10GB, including vector, original file, text, index, etc.
+	// StorageQuota 是存储配额（字节），默认 10GB，
+	// 统计范围包括向量、原始文件、文本、索引等。
 	StorageQuota int64 `yaml:"storage_quota"       json:"storage_quota"       gorm:"default:10737418240"`
-	// Storage used (Bytes)
+	// StorageUsed 是已用存储（字节）。
 	StorageUsed int64 `yaml:"storage_used"        json:"storage_used"        gorm:"default:0"`
-	// Global Context configuration for this workspace (default for all sessions)
+	// ContextConfig 是空间级全局上下文配置，作为该空间所有会话的默认值。
 	ContextConfig *ContextConfig `yaml:"context_config"      json:"context_config"      gorm:"type:jsonb"`
-	// Global WebSearch configuration for this workspace
+	// WebSearchConfig 是空间级全局联网搜索配置。
 	WebSearchConfig *WebSearchConfig `yaml:"web_search_config"   json:"web_search_config"   gorm:"type:jsonb"`
-	// Parser engine config overrides (MinerU endpoint, API key, etc.). Used when parsing documents; overrides env.
+	// ParserEngineConfig 是解析引擎的覆盖配置（MinerU 地址、API Key 等）。
+	// 解析文档时使用，优先于环境变量。
 	ParserEngineConfig *ParserEngineConfig `yaml:"parser_engine_config" json:"parser_engine_config" gorm:"type:jsonb"`
-	// Credentials config: third-party provider credentials (e.g. WeKnoraCloud AppID/AppSecret)
+	// Credentials 是第三方服务凭据（如 WeKnoraCloud 的 AppID/AppSecret）。
 	Credentials *CredentialsConfig `yaml:"credentials" json:"credentials" gorm:"type:jsonb"`
-	// Storage engine config: parameters for Local, MinIO, COS. Used for document/file storage and docreader.
+	// StorageEngineConfig 是存储引擎配置：Local / MinIO / COS 的参数，
+	// 用于文档/文件存储和 docreader。
 	StorageEngineConfig *StorageEngineConfig `yaml:"storage_engine_config" json:"storage_engine_config" gorm:"type:jsonb"`
-	// DefaultStorageBackendID is the workspace default concrete storage instance.
+	// DefaultStorageBackendID 是该空间默认使用的具体存储实例 ID。
 	DefaultStorageBackendID *string `yaml:"default_storage_backend_id" json:"default_storage_backend_id,omitempty" gorm:"column:default_storage_backend_id;type:varchar(36)"`
-	// Chat history config: knowledge base configuration for indexing and searching chat messages via vector search
+	// ChatHistoryConfig 是聊天历史配置：用向量检索索引和搜索聊天消息的知识库配置。
 	ChatHistoryConfig *ChatHistoryConfig `yaml:"chat_history_config" json:"chat_history_config" gorm:"type:jsonb"`
-	// Retrieval config: global search/retrieval parameters shared by knowledge search and message search
+	// RetrievalConfig 是检索配置：知识搜索与消息搜索共享的全局检索参数。
 	RetrievalConfig *RetrievalConfig `yaml:"retrieval_config" json:"retrieval_config" gorm:"type:jsonb"`
-	// Memory config: workspace switch for cross-session long-term memory
+	// MemoryConfig 是记忆配置：跨会话长期记忆的空间级开关。
 	MemoryConfig *MemoryConfig `yaml:"memory_config" json:"memory_config" gorm:"type:jsonb"`
-	// Assistant config: display name and access ceiling of the WeKnora assistant
+	// AssistantConfig 是助手配置：WeKnora 助手的显示名称与权限上限。
 	AssistantConfig *AssistantConfig `yaml:"assistant_config" json:"assistant_config" gorm:"type:jsonb"`
-	// Default settings: the workspace's default model for each type and purpose
+	// DefaultSettings 是默认设置：该空间为每种类型和用途指定的默认模型。
 	DefaultSettings *DefaultSettings `yaml:"default_settings" json:"default_settings" gorm:"type:jsonb"`
-	// API principal config: controls how X-API-Key requests map to terminal principals.
+	// APIPrincipalConfig 是 API 主体配置：控制 X-API-Key 请求如何映射到终端用户主体。
+	// json:"-" 表示它不会通过 API 响应返回。
 	APIPrincipalConfig *APIPrincipalConfig `yaml:"api_principal_config" json:"-" gorm:"type:jsonb"`
-	// Creation time
+	// CreatedAt 是创建时间。
 	CreatedAt time.Time `yaml:"created_at"          json:"created_at"`
-	// Last updated time
+	// UpdatedAt 是最后更新时间。
 	UpdatedAt time.Time `yaml:"updated_at"          json:"updated_at"`
-	// Deletion time
+	// DeletedAt 是删除时间（软删除）。
 	DeletedAt gorm.DeletedAt `yaml:"deleted_at"          json:"deleted_at"          gorm:"index"`
 }
 
@@ -206,18 +211,26 @@ const (
 	APIPrincipalModeSignedToken APIPrincipalMode = "signed_token"
 )
 
-// APIPrincipalConfig controls how tenant API-key requests map to terminal
-// principals. Direct header mode is low-assurance and should only be used for
-// trusted server-to-server calls; signed-token mode verifies the user claim.
+// APIPrincipalConfig 控制空间 API Key 请求如何映射到终端用户主体。
+// direct_header 模式保证级别低，只应用于可信的服务端到服务端调用；
+// signed_token 模式会校验用户声明（签名 JWT）。
 type APIPrincipalConfig struct {
-	Mode                  APIPrincipalMode `json:"mode"`
-	DirectHeaderName      string           `json:"direct_header_name,omitempty"`
-	SignedTokenHeaderName string           `json:"signed_token_header_name,omitempty"`
-	// RequireDirectHeader, when true in direct_header mode, rejects API-key
-	// requests that omit the configured user-id header instead of falling
-	// back to the tenant-level principal.
-	RequireDirectHeader bool   `json:"require_direct_header,omitempty"`
-	HMACSecret          string `json:"hmac_secret,omitempty"`
+	// Mode 是身份模式：
+	//   - tenant（默认）：不区分终端用户，整把 Key 一个身份；
+	//   - direct_header：信任请求头中的外部用户 ID；
+	//   - signed_token：校验签名 Token 中的用户声明。
+	Mode APIPrincipalMode `json:"mode"`
+	// DirectHeaderName 是 direct_header 模式下携带外部用户 ID 的请求头名称。
+	DirectHeaderName string `json:"direct_header_name,omitempty"`
+	// SignedTokenHeaderName 是 signed_token 模式下携带签名 Token 的请求头名称。
+	SignedTokenHeaderName string `json:"signed_token_header_name,omitempty"`
+	// RequireDirectHeader 仅在 direct_header 模式下生效：
+	// 为 true 时，缺少用户 ID 请求头的请求会被拒绝；
+	// 为 false 时，回退到空间级主体（api_tenant）。
+	RequireDirectHeader bool `json:"require_direct_header,omitempty"`
+	// HMACSecret 是校验 signed_token 签名所用的共享密钥。
+	// 配置 SYSTEM_AES_KEY 时，落库前由 Value() 加密；查询接口不会返回明文。
+	HMACSecret string `json:"hmac_secret,omitempty"`
 }
 
 func (c *APIPrincipalConfig) Value() (driver.Value, error) {
