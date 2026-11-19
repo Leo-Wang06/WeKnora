@@ -43,16 +43,41 @@ const defaultMessages = {
   tokenRefreshFailed: 'Token refresh failed',
 }
 
+/**
+ * 流式请求的“认证失败”错误标记（目前用于 SSE 握手的 401）。
+ *
+ * 用专门的类而不是普通 Error，是为了让错误跨越多层
+ * （onopen → fetchEventSource → 重试逻辑）后仍能被准确识别：
+ * 只有它可以触发“刷新 token 并重放一次”，其他错误不能误触发刷新，
+ * 也不能在包装过程中丢失类型。
+ */
 export class StreamAuthError extends Error {
+  /**
+   * @param status HTTP 状态码（通常是 401）；保留下来用于日志和判断。
+   *               `readonly` 是 TS 参数属性语法，等价于声明字段并赋值。
+   */
   constructor(readonly status: number) {
     super(`HTTP ${status}`)
+    // 固定 name：当 instanceof 因跨 realm/转译而失效时，isStreamAuthError 仍可按名称兜底识别。
     this.name = 'StreamAuthError'
   }
 }
 
+/**
+ * 判断错误是否为可恢复的流式认证失败（StreamAuthError）。
+ *
+ * 采用“原型优先、名称兜底”的双重判断：
+ * - instanceof 在同一运行时内最准确，但跨 realm、模块重复加载或错误被
+ *   序列化重建时可能失效；
+ * - name 兜底保证错误经过多层包装后仍能被识别，避免把 token 过期
+ *   误判成普通失败、直接要求用户重新登录。
+ */
 export function isStreamAuthError(err: unknown): boolean {
+  // catch 捕获的错误在严格 TS 下是 unknown，先排除 null/undefined 和原始值。
   if (!err || typeof err !== 'object') return false
+  // 主判断：同一运行时内沿原型链确认类型。
   if (err instanceof StreamAuthError) return true
+  // 兜底：原型链断裂时按固定的 name 识别。
   return (err as { name?: string }).name === 'StreamAuthError'
 }
 
@@ -184,11 +209,12 @@ export async function refreshAccessTokenShared(
 }
 
 /**
- * Replay an SSE handshake once after a 401. Refresh failure already
- * redirected; a second 401 after a successful refresh is surfaced to the
- * caller without wiping the newly minted session (axios does the same).
+ * 在收到 401 后，重放一次 SSE 握手。
  *
- * Returns undefined when a newer send or an abort superseded the replay.
+ * 刷新失败时已经跳转过登录页；刷新成功后的第二次 401 会直接抛给调用方，
+ * 不会清掉刚签发的新会话（axios 的处理方式相同）。
+ *
+ * 如果这次重放已被更新的发送或用户中止取代，则返回 undefined。
  */
 export async function runStreamWithAuthRetry<T>(options: {
   run: (token: string) => Promise<T>
@@ -212,6 +238,8 @@ export async function runStreamWithAuthRetry<T>(options: {
 
     if (!options.isCurrent()) return undefined
 
+    // 这里的“再试一次”是用刷新后的新 token 重放原请求，
+    // 因为第一次请求失败的原因就是 token 过期。
     try {
       return await options.run(refreshedToken)
     } catch (retryErr) {

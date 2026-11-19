@@ -63,14 +63,36 @@ type ChatData struct {
 	Extra       map[string]interface{} `json:"extra,omitempty"`
 }
 
-// ErrorData represents error event data
+// ErrorData 是错误事件（EventError）在 EventBus 上传播的载荷。
+//
+// 任何执行阶段失败时都会构造它，再由处理器转成 SSE 的 error 事件或写入消息正文。
+// 其中 Stage 是最关键的字段，用于区分失败发生在哪个阶段；前端据它决定处理方式
+// （例如 stage=message_persistence 表示回答已流式输出完、但落库失败，
+// 此时应保留正文，而不是当作整轮生成失败清空）。
+//
+// 已知的 Stage 取值：
+//   - agent_execution：Agent 引擎执行或恢复执行失败
+//   - knowledge_qa_execution：知识问答（RAG）流水线失败
+//   - chat_completion_stream：普通问答的模型流式输出中断或失败
+//   - message_persistence：回答已生成，但保存 assistant 消息失败
+//   - automation：自动化任务执行失败
+//   - child_agent：子 Agent 启动或执行失败
+//
+// 注意：Agent 流处理器（AgentStreamHandler.handleError）只会把 Stage 和 Error
+// 转发到 SSE 的 data 中；其余字段主要用于后端内部路由、日志与诊断。
 type ErrorData struct {
-	Error     string                 `json:"error"`
-	ErrorCode string                 `json:"error_code,omitempty"`
-	Stage     string                 `json:"stage"` // 错误发生的阶段
-	SessionID string                 `json:"session_id"`
-	Query     string                 `json:"query,omitempty"`
-	Extra     map[string]interface{} `json:"extra,omitempty"`
+	// Error 是人类可读的错误信息，作为 SSE 的 content 或写入消息正文。
+	Error string `json:"error"`
+	// ErrorCode 是预留的机器可读错误码；现有构造点通常不填。
+	ErrorCode string `json:"error_code,omitempty"`
+	// Stage 标注错误发生的阶段，是前端/处理器区的核心分支依据（见类型注释中的取值）。
+	Stage string `json:"stage"`
+	// SessionID 是错误所属的会话，用于路由、归属和持久化。
+	SessionID string `json:"session_id"`
+	// Query 是可选字段，记录出错时的原始问题，便于诊断。
+	Query string `json:"query,omitempty"`
+	// Extra 是预留的扩展载荷，供特定场景附加上下文。
+	Extra map[string]interface{} `json:"extra,omitempty"`
 }
 
 // NewEvent creates a new Event with metadata

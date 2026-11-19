@@ -232,97 +232,89 @@ type ChatResponse struct {
 type ResponseType string
 
 const (
-	// Answer response type
+	// 回答（answer）响应类型
 	ResponseTypeAnswer ResponseType = "answer"
-	// References response type
+	// 引用（references）响应类型
 	ResponseTypeReferences ResponseType = "references"
-	// Thinking response type (for agent thought process)
+	// 思考响应类型（用于 Agent 的思考过程）
 	ResponseTypeThinking ResponseType = "thinking"
-	// ResponseTypeProgress carries a user-visible intermediate update.
+	// ResponseTypeProgress 携带用户可见的中间进度更新。
 	ResponseTypeProgress ResponseType = "progress"
-	// Tool call response type (for agent tool invocations)
+	// 工具调用响应类型（用于 Agent 发起工具调用）
 	ResponseTypeToolCall ResponseType = "tool_call"
-	// Tool result response type (for agent tool results)
+	// 工具结果响应类型（用于 Agent 的工具执行结果）
 	ResponseTypeToolResult ResponseType = "tool_result"
-	// ResponseTypeInstallOutput carries installer progress without completing a tool.
+	// ResponseTypeInstallOutput 携带安装器进度，但并不表示工具已完成。
 	ResponseTypeInstallOutput ResponseType = "install_output"
-	// ResponseTypeCommandOutput updates the pending tool card without completing it.
+	// ResponseTypeCommandOutput 更新待完成的工具卡片，但并不将其标记为完成。
 	ResponseTypeCommandOutput ResponseType = "command_output"
-	// ResponseTypeWorkStarted is a background work event of shared design §7.
-	// Features emit it through service.BackgroundEventEmitter, which picks the stream.
+	// ResponseTypeWorkStarted 是共享设计 §7 中的后台工作任务事件。
+	// 各功能通过 service.BackgroundEventEmitter 发出，由它决定投递到哪条流。
 	ResponseTypeWorkStarted ResponseType = "work_started"
-	// ResponseTypeWorkEvent is a background work event of shared design §7.
-	// Features emit it through service.BackgroundEventEmitter, which picks the stream.
+	// ResponseTypeWorkEvent 是共享设计 §7 中的后台工作任务事件。
+	// 各功能通过 service.BackgroundEventEmitter 发出，由它决定投递到哪条流。
 	ResponseTypeWorkEvent ResponseType = "work_event"
-	// ResponseTypeWorkFinished is a background work event of shared design §7.
-	// Features emit it through service.BackgroundEventEmitter, which picks the stream.
+	// ResponseTypeWorkFinished 是共享设计 §7 中的后台工作任务事件。
+	// 各功能通过 service.BackgroundEventEmitter 发出，由它决定投递到哪条流。
 	ResponseTypeWorkFinished ResponseType = "work_finished"
-	// Error response type
+	// 错误响应类型
 	ResponseTypeError ResponseType = "error"
-	// Reflection response type (for agent reflection)
+	// 反思（reflection）响应类型（用于 Agent 的自我反思）
 	ResponseTypeReflection ResponseType = "reflection"
-	// Session title response type
+	// 会话标题响应类型
 	ResponseTypeSessionTitle ResponseType = "session_title"
-	// Agent query response type (query received and processing started)
+	// Agent 查询响应类型（已收到查询并开始处理）
 	ResponseTypeAgentQuery ResponseType = "agent_query"
-	// Complete response type (agent complete)
+	// 完成响应类型（Agent 运行结束）
 	ResponseTypeComplete ResponseType = "complete"
-	// ResponseTypeArtifactsPending is sent while skill/sandbox output is being
-	// copied into persistent storage after the answer has already streamed.
-	// The UI shows a toolbar placeholder until ResponseTypeComplete carries
-	// the file list.
+	// ResponseTypeArtifactsPending 在回答已流式输出完毕、技能/沙箱产物
+	// 正被复制到持久化存储期间发送。界面先显示工具栏占位，
+	// 直到 ResponseTypeComplete 携带文件列表。
 	ResponseTypeArtifactsPending ResponseType = "artifacts_pending"
-	// ResponseTypeRunSuspended precedes complete when the run ended waiting
-	// on a user prompt; the message stays incomplete until it is answered.
+	// ResponseTypeRunSuspended 在运行因等待用户回答而结束时先于 complete
+	// 发送；在用户回答之前，该消息保持未完成状态。
 	ResponseTypeRunSuspended ResponseType = "run_suspended"
-	// ResponseTypeRunResumed opens the stream of a suspended run resumed
-	// after its prompt was answered. Steps saved before the suspension are
-	// not replayed; the client keeps the ones it already shows.
+	// ResponseTypeRunResumed 开启一条已挂起运行在提问被回答后恢复的事件流。
+	// 挂起前已保存的步骤不会被重放；客户端保留它已经展示过的步骤。
 	ResponseTypeRunResumed ResponseType = "run_resumed"
-	// ToolApprovalRequired: MCP tool marked dangerous — UI must collect user approval before execution continues
+	// ToolApprovalRequired：MCP 工具被标记为危险——界面必须先收集用户批准，
+	// 才能继续执行。
 	ResponseTypeToolApprovalRequired ResponseType = "tool_approval_required"
-	// ToolApprovalResolved: user approved/rejected (or timeout); informational for UI replay
+	// ToolApprovalResolved：用户已批准/拒绝（或已超时）；仅用于界面回放。
 	ResponseTypeToolApprovalResolved ResponseType = "tool_approval_resolved"
-	// ResponseTypeAgentPromptRequired indicates that the agent asks the user something (ask_user);
-	// data carries the prompt kind and its request JSON.
+	// ResponseTypeAgentPromptRequired 表示 Agent 正在向用户提问（ask_user）；
+	// data 携带提问类型及其请求 JSON。
 	ResponseTypeAgentPromptRequired ResponseType = "agent_prompt_required"
-	// ResponseTypeAgentPromptResolved indicates an answered, declined, timed out or canceled prompt.
+	// ResponseTypeAgentPromptResolved 表示提问已被回答、拒绝、超时或取消。
 	ResponseTypeAgentPromptResolved ResponseType = "agent_prompt_resolved"
-	// MCPOAuthRequired: an OAuth-enabled MCP service was invoked but the user
-	// has not authorized it — UI must surface an "Authorize" prompt and the
-	// agent pauses until authorization completes (or the wait times out).
+	// MCPOAuthRequired：调用了启用了 OAuth 的 MCP 服务，但用户尚未授权
+	// ——界面必须弹出“授权”提示，Agent 暂停，直到授权完成（或等待超时）。
 	ResponseTypeMCPOAuthRequired ResponseType = "mcp_oauth_required"
-	// MCPOAuthResolved: authorization completed / timed out / canceled;
-	// informational for UI replay.
+	// MCPOAuthResolved：授权已完成 / 超时 / 被取消；仅用于界面回放。
 	ResponseTypeMCPOAuthResolved ResponseType = "mcp_oauth_resolved"
-	// MemoryRecalled: the long-term memories injected into this answer, so
-	// the UI can show and let the user delete what influenced it.
+	// MemoryRecalled：本次回答注入的长期记忆，界面可据此展示，
+	// 并允许用户删除影响过回答的记忆。
 	ResponseTypeMemoryRecalled ResponseType = "memory_recalled"
-	// ResponseTypeSteer is the per-run control signal a client POSTs while a
-	// turn is still running. It rides the same StreamManager keyspace as the
-	// stop event but in a dedicated sub-list (AppendSteerEvents/GetSteerEvents)
-	// so it never appears on the user-visible SSE stream. The running engine
-	// drains it at the next round boundary (SteerSink.PollSteer) or, when the
-	// loop has already exited, the run's teardown paths hand it to the next
-	// run — unless the turn was stopped, in which case it is discarded.
+	// ResponseTypeSteer 是客户端在回合仍在运行时 POST 的、针对单次运行的控制信号。
+	// 它与 stop 事件共用同一 StreamManager 键空间，但存放在专用子列表
+	//（AppendSteerEvents/GetSteerEvents），因此永远不会出现在用户可见的
+	// SSE 流上。运行中的引擎会在下一个轮次边界（SteerSink.PollSteer）
+	// 取走它；若循环已经退出，则运行的收尾路径会把它交给下一次运行——
+	// 除非该回合已被停止，此时它会被丢弃。
 	ResponseTypeSteer ResponseType = "steer"
-	// ResponseTypeUserMessageInjected is emitted on the user-visible stream
-	// right after a steered message was accepted into the running turn: a
-	// user-role DB row has been persisted under the run's request_id and the
-	// text was appended to the agent's message list. The frontend uses it to
-	// move the queued message out of the composer overlay and into the
-	// transcript.
+	// ResponseTypeUserMessageInjected 在被 steer 的消息被接纳入运行中的回合后，
+	// 立即在用户可见流上发出：一条 user 角色的数据库记录已在该运行的
+	// request_id 下持久化，文本也已追加到 Agent 的消息列表。前端据此把排队中的
+	// 消息从输入框浮层移入对话记录。
 	ResponseTypeUserMessageInjected ResponseType = "user_message_injected"
-	// ResponseTypeContextCompacted is older conversation summarized away to
-	// fit the context window. Surfaced because it changes what the agent
-	// remembers — an answer that forgets an earlier instruction is otherwise
-	// indistinguishable from the model ignoring it.
+	// ResponseTypeContextCompacted 表示较早的对话已被摘要压缩以适配上下文窗口。
+	// 之所以要展示，是因为它改变了 Agent 记得什么——否则一个忘记了早先指令的
+	// 回答，与模型直接无视指令将无法区分。
 	ResponseTypeContextCompacted ResponseType = "context_compacted"
-	// ResponseTypeInstallPrompt is the instruction a skill install handed to
-	// the installer agent. Only the skill install transcript emits this, and
-	// it emits it first, so replaying the log alone shows what was asked for
-	// — the console does not have to read the durable prompt row to caption
-	// the run.
+	// ResponseTypeInstallPrompt 是技能安装交给安装器 Agent 的指令。
+	// 只有技能安装记录会发出它，并且它总是最先发出，因此仅回放日志就能
+	// 看出当初要求安装什么——控制台不必读取持久化的提问记录来为这次运行
+	// 添加说明。
 	ResponseTypeInstallPrompt ResponseType = "install_prompt"
 )
 
@@ -339,17 +331,31 @@ const FinishReasonIncomplete = "incomplete"
 const StreamEndedEarlyError = "the model's response ended before it finished (connection interrupted)"
 
 type StreamResponse struct {
-	ID                  string                 `json:"id"`
-	ResponseType        ResponseType           `json:"response_type"`
-	Content             string                 `json:"content"`
-	Done                bool                   `json:"done"`
-	KnowledgeReferences References             `json:"knowledge_references,omitempty"`
-	SessionID           string                 `json:"session_id,omitempty"`
-	AssistantMessageID  string                 `json:"assistant_message_id,omitempty"`
-	ToolCalls           []LLMToolCall          `json:"tool_calls,omitempty"`
-	Data                map[string]interface{} `json:"data,omitempty"`
-	Usage               *TokenUsage            `json:"usage,omitempty"`
-	FinishReason        string                 `json:"finish_reason,omitempty"`
+	// 事件标识。流式问答中通常是本次请求的 Request ID（与 X-Request-ID 一致）。
+	ID string `json:"id"`
+	// 事件类型，决定前端如何处理：answer=回答分片、agent_query=问答开始、
+	// tool_call/tool_result=工具调用与结果、references=知识引用、complete=整轮结束、
+	// error=错误等。
+	ResponseType ResponseType `json:"response_type"`
+	// 文本内容。answer 事件中是回答的一个分片，前端按顺序拼接；其他事件通常为空。
+	Content string `json:"content"`
+	// 该事件是否表示结束：answer 的最后一个分片和 complete 事件为 true。
+	Done bool `json:"done"`
+	// 知识库检索引用，仅 references 事件携带。
+	KnowledgeReferences References `json:"knowledge_references,omitempty"`
+	// 会话 ID；目前仅 agent_query 事件填充。
+	SessionID string `json:"session_id,omitempty"`
+	// 助手消息 ID；仅 agent_query 事件填充，用于 continue-stream 续传和停止生成。
+	AssistantMessageID string `json:"assistant_message_id,omitempty"`
+	// LLM 工具调用信息，部分 tool_call 相关事件会携带。
+	ToolCalls []LLMToolCall `json:"tool_calls,omitempty"`
+	// 事件附加数据，结构随 response_type 变化，例如 tool_name、event_id、
+	// duration_ms、final_content 等。
+	Data map[string]interface{} `json:"data,omitempty"`
+	// token 用量统计，通常在 complete 事件中返回。
+	Usage *TokenUsage `json:"usage,omitempty"`
+	// 模型结束原因，例如 stop、length、incomplete 等。
+	FinishReason string `json:"finish_reason,omitempty"`
 }
 
 // References references

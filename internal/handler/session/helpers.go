@@ -179,11 +179,20 @@ func dedupRequestStrings(values []string) []string {
 	return result
 }
 
-// setSSEHeaders sets the standard Server-Sent Events headers
+// setSSEHeaders 设置 SSE 流式响应的标准响应头。必须在写出任何事件之前调用：
+// 响应头一旦发出，状态码与 Content-Type 就固定了，之后无法再改回普通 JSON 错误。
 func setSSEHeaders(c *gin.Context) {
+	// 声明 SSE 协议类型：客户端据此按 event/data 分帧、边收边解析，
+	// 而不是等待完整响应再按 JSON 处理。
 	c.Header("Content-Type", "text/event-stream")
+	// 禁止浏览器与中间代理缓存响应：流内容随时间变化，
+	// 复用旧响应会造成重复、错位或假完成。
 	c.Header("Cache-Control", "no-cache")
+	// HTTP/1.1 长连接：一次请求要持续数分钟，连接不能随单次响应结束就关闭。
+	// 它是逐跳头，HTTP/2 下会被服务端忽略。
 	c.Header("Connection", "keep-alive")
+	// 关闭 nginx 的代理缓冲：默认会攒到数 KB 才转发，使“流式”退化为延迟爆发。
+	// 非标准头，仅 nginx 及兼容实现识别。
 	c.Header("X-Accel-Buffering", "no")
 }
 

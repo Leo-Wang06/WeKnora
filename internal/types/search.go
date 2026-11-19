@@ -155,103 +155,90 @@ type MatchedImage struct {
 	URL             string `json:"url"`
 }
 
-// SearchResult represents the search result
+// SearchResult 表示一条检索结果（命中的分块及其元信息）。
 type SearchResult struct {
-	// CitationSources retains independently citeable bodies after context expansion.
+	// 上下文扩展后仍然可以独立引用的正文片段；仅内部使用，不序列化、不落库。
 	CitationSources []*SearchResult `json:"-" gorm:"-"`
-	// ID
+	// 分块（chunk）ID。
 	ID string `gorm:"column:id"              json:"id" extensions:"x-agent=chunk_id"`
-	// Content
+	// 分块正文内容。
 	Content string `gorm:"column:content"         json:"content" extensions:"x-agent,x-agent-max-runes=600"`
-	// Knowledge ID
+	// 所属知识/文档 ID。
 	KnowledgeID string `gorm:"column:knowledge_id"    json:"knowledge_id" extensions:"x-agent"`
-	// Chunk index
+	// 分块在文档中的序号。
 	ChunkIndex int `gorm:"column:chunk_index"     json:"chunk_index" extensions:"x-agent"`
-	// Knowledge title
+	// 知识/文档标题。
 	KnowledgeTitle string `gorm:"column:knowledge_title" json:"knowledge_title" extensions:"x-agent"`
-	// Start at
+	// 分块在原文中的起始位置。
 	StartAt int `gorm:"column:start_at"        json:"start_at"`
-	// End at
+	// 分块在原文中的结束位置。
 	EndAt int `gorm:"column:end_at"          json:"end_at"`
-	// Seq
+	// 分块序号（与 ChunkIndex 对应，用于排序）。
 	Seq int `gorm:"column:seq"             json:"seq"`
-	// Score
+	// 融合后的相关性得分（通常基于排名计算）。
 	Score float64 `                              json:"score" extensions:"x-agent"`
-	// VectorScore is the engine's own similarity of a vector hit, before
-	// fusion replaced Score with a rank-based one; 0 for other hits. See
-	// IndexWithScore.VectorScore.
+	// 向量检索自身的相似度，在融合把 Score 替换为基于排名的分数之前；
+	// 非向量命中的该值为 0。参见 IndexWithScore.VectorScore。
 	VectorScore float64 `json:"-"`
-	// Match type
+	// 命中类型（向量、关键词、相邻分块、父分块、关系分块、图谱、网络搜索等）。
 	MatchType MatchType `                              json:"match_type" extensions:"x-agent"`
-	// SubChunkIndex
+	// 子分块 ID 列表。
 	SubChunkID []string `                              json:"sub_chunk_id"`
-	// Metadata
+	// 元数据键值对。
 	Metadata map[string]string `                              json:"metadata"`
 
-	// Chunk 类型
+	// 分块类型。
 	ChunkType string `json:"chunk_type" extensions:"x-agent"`
-	// 父 Chunk ID
+	// 父分块 ID。
 	ParentChunkID string `json:"parent_chunk_id"`
-	// 图片信息 (JSON 格式)
+	// 图片信息（JSON 字符串）。
 	ImageInfo string `json:"image_info"`
-	// MatchedImages survives merging, deduplication and stored reference replay.
-	// It contains storage references, never image bytes.
+	// 经过合并、去重和已存引用重放后仍保留的命中图片；存的是存储引用，不是图片字节。
 	MatchedImages []MatchedImage `json:"matched_images,omitempty" gorm:"-"`
 
-	// Knowledge file name
-	// Used for file type knowledge, contains the original file name
+	// 知识文件名，仅文件类知识使用，保存原始文件名。
 	KnowledgeFilename string `json:"knowledge_filename"`
 
-	// Knowledge source
-	// Used to indicate the source of the knowledge, such as "url"
+	// 知识来源，例如 "url"。
 	KnowledgeSource string `json:"knowledge_source"`
 
-	// KnowledgeChannel indicates through which channel the knowledge was ingested (web, api, wechat, etc.)
+	// 知识的入库渠道（web、api、wechat 等）。
 	KnowledgeChannel string `json:"knowledge_channel"`
 
-	// ChunkMetadata stores chunk-level metadata (e.g., generated questions)
+	// 分块级元数据，例如自动生成的问题。
 	ChunkMetadata JSON `json:"chunk_metadata,omitempty"`
-	// SkipGeneratedQuestions keeps generated questions out of the rerank
-	// passage. Search sets it when the knowledge base's question generation
-	// switch is off, including bases that were turned off before the index
-	// rows were disabled.
+	// 重排时排除自动生成的问题文本。知识库关闭问题生成开关时由检索流程置为 true，
+	// 也包括那些在索引行被禁用之前就已关闭的知识库。
 	SkipGeneratedQuestions bool `json:"-" gorm:"-"`
-	// ContextHeader is the chunk's heading breadcrumb, part of what was
-	// embedded (Chunk.EmbeddingContent) but not of Content. Internal only.
+	// 分块的标题面包屑（heading breadcrumb）；属于嵌入内容（Chunk.EmbeddingContent），
+	// 但不属于 Content。仅内部使用。
 	ContextHeader string `json:"-"`
 
-	// MatchedContent is the actual content that was matched in vector search
-	// For FAQ: this is the matched question text (standard or similar question)
+	// 向量检索实际命中的内容；FAQ 场景下为命中的问题文本（标准问题或相似问题）。
 	MatchedContent string `json:"matched_content,omitempty"`
 
-	// KnowledgeDescription is the description of the knowledge document
+	// 知识文档的描述。
 	KnowledgeDescription string `json:"knowledge_description,omitempty"`
 
-	// KnowledgeCustomMetadata is user-authored context safe to expose to models.
+	// 用户自定义的、可安全暴露给模型的元数据。
 	KnowledgeCustomMetadata string `json:"knowledge_custom_metadata,omitempty"`
 
-	// KnowledgeBaseID is the ID of the knowledge base this result belongs to
+	// 该结果所属的知识库 ID。
 	KnowledgeBaseID string `json:"knowledge_base_id,omitempty"`
 
-	// SourceLocators point back into the original file for citation
-	// navigation. Merged results carry the union of their chunks' locators.
+	// 指回原始文件位置的定位信息，用于引用跳转；合并后的结果携带各分块定位信息的并集。
 	SourceLocators SourceLocators `json:"source_locators,omitempty"`
 
-	// ContentRevision is the chunk edit revision at retrieval time.
-	// Internal only: used by the merge pipeline to decide whether source
-	// coordinates are still trustworthy.
+	// 检索时分块的编辑版本号。仅内部使用：合并流程据此判断来源坐标是否仍然可信。
 	//
-	// Zero means "never edited", so any construction path that forgets to carry
-	// it over fails open to the position path. Results rebuilt from JSON (stored
-	// message references) always land on zero because the field is not
-	// serialized; the length invariant in chunkTrusted is the remaining guard
-	// there. Keep the gorm column explicit so direct row scans populate it.
+	// 0 表示“从未编辑”，因此任何忘记携带该值的构造路径都会退回到按位置处理（fail open）；
+	// 从 JSON 重建的结果（已存储的消息引用）因为该字段不序列化，版本号总是 0，
+	// 此时 chunkTrusted 中的长度不变量是剩余的保护。保留显式的 gorm 列，
+	// 以便直接扫描数据行时能填充它。
 	ContentRevision int `gorm:"column:content_revision" json:"-"`
 
-	// ContentRewritten reports that the merge pipeline replaced Content
-	// (parent or neighbor expansion) after retrieval, so StartAt/EndAt no
-	// longer describe the body. Internal only: used by the merge pipeline,
-	// never serialized.
+	// 标记合并流程在检索后替换过 Content（父分块或相邻分块扩展），
+	// 因此 StartAt/EndAt 已不再描述正文。仅内部使用，从不序列化。
 	ContentRewritten bool `json:"-"`
 }
 

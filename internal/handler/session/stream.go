@@ -39,7 +39,7 @@ func (h *Handler) ContinueStream(c *gin.Context) {
 
 	logger.Info(ctx, "Start continuing stream response processing")
 
-	// Get session ID from URL parameter
+	// 从 URL 参数中获取会话 ID
 	sessionID := secutils.SanitizeForLog(c.Param("session_id"))
 	if sessionID == "" {
 		logger.Error(ctx, "Session ID is empty")
@@ -47,7 +47,7 @@ func (h *Handler) ContinueStream(c *gin.Context) {
 		return
 	}
 
-	// Get message ID from query parameter
+	// 从查询参数中获取消息 ID
 	messageID := secutils.SanitizeForLog(c.Query("message_id"))
 	if messageID == "" {
 		logger.Error(ctx, "Message ID is empty")
@@ -57,8 +57,8 @@ func (h *Handler) ContinueStream(c *gin.Context) {
 
 	logger.Infof(ctx, "Continuing stream, session ID: %s, message ID: %s", sessionID, messageID)
 
-	// Resolve before any SSE header is written so an invalid resource_urls value
-	// is still reportable as a normal 400 JSON error.
+	// 必须在写出任何 SSE 响应头之前完成解析，这样非法的 resource_urls 值
+	// 仍能以普通 400 JSON 错误的形式返回。
 	resourceRewriter, err := h.resolveStreamRewriter(c)
 	if err != nil {
 		logger.Warnf(ctx, "Rejected resource URL mode: %v", err)
@@ -66,7 +66,7 @@ func (h *Handler) ContinueStream(c *gin.Context) {
 		return
 	}
 
-	// Verify that the session exists and belongs to this tenant
+	// 校验会话存在且属于当前租户
 	if _, err := h.sessionService.GetSession(ctx, sessionID); err != nil {
 		if stderrors.Is(err, errors.ErrSessionNotFound) {
 			logger.Warnf(ctx, "Session not found, ID: %s", sessionID)
@@ -78,24 +78,24 @@ func (h *Handler) ContinueStream(c *gin.Context) {
 		return
 	}
 
-	// Get the incomplete message
+	// 获取未完成的消息
 	message, err := h.messageService.GetMessage(ctx, sessionID, messageID)
 	if err != nil {
 		if stderrors.Is(err, errors.ErrSessionNotFound) {
-			// PR #1309 plumbed user-scope into messageService.GetMessage's
-			// session existence check; non-owner / wrong-user lookups now
-			// surface as ErrSessionNotFound. Map to 404 so clients can tell
-			// "wrong URL" from a real 5xx instead of seeing a generic 500.
+			// PR #1309 将用户范围（user-scope）接入 messageService.GetMessage 的
+			// 会话存在性检查；非所有者 / 错误用户的查询现在会返回
+			// ErrSessionNotFound。这里映射为 404，让客户端能区分“URL 有误”
+			// 和真正的 5xx，而不是看到一个笼统的 500。
 			logger.Warnf(ctx, "Session not found, ID: %s", sessionID)
 			c.Error(errors.NewNotFoundError(err.Error()))
 			return
 		}
 		if stderrors.Is(err, gorm.ErrRecordNotFound) {
-			// The message_id doesn't exist (e.g. a wrong / non-persisted id, or an
-			// expired replay buffer). That is a client error, not a server fault:
-			// return 404 so callers read resource.not_found (a permanent condition
-			// they must not retry) instead of a retryable 5xx. Mirrors the
-			// ErrSessionNotFound branch above and the kb/doc/chunk not-found fix.
+			// message_id 不存在（例如错误的 / 未持久化的 ID，或已过期的
+			// 回放缓冲区）。这属于客户端错误而非服务端故障：返回 404，
+			// 调用方因此读到 resource.not_found（一种永久性错误，不应重试），
+			// 而不是可重试的 5xx。与上面的 ErrSessionNotFound 分支以及
+			// kb/doc/chunk 的未找到修复保持一致。
 			logger.Warnf(ctx, "Message not found, session ID: %s, message ID: %s", sessionID, messageID)
 			c.Error(errors.NewNotFoundError(err.Error()))
 			return
@@ -114,7 +114,9 @@ func (h *Handler) ContinueStream(c *gin.Context) {
 		return
 	}
 
-	// Get initial events from stream (offset 0)
+	// 从流中获取初始事件（偏移量 0）
+	// 这里 events 就是该 assistant 消息的事件流中，从第 0 条到当前末尾的所有单个事件
+	// currentOffset 表示下次读取应该从哪个位置开始——即“已经读掉的事件条数”也是下一条未读事件的索引
 	events, currentOffset, err := h.streamManager.GetEvents(ctx, sessionID, messageID, 0)
 	if err != nil {
 		logger.ErrorWithFields(ctx, err, nil)
@@ -131,8 +133,8 @@ func (h *Handler) ContinueStream(c *gin.Context) {
 		return
 	}
 
-	// A scheduler may not have reset the previous segment yet. Never replay
-	// its terminal event as if the just-approved continuation had completed.
+	// 调度器可能尚未重置上一段运行。绝不能把它的终结事件当作
+	// 刚获批的这次续接已经完成来回放。
 	if pendingID := c.Query("resume_pending_id"); pendingID != "" && !message.IsCompleted {
 		ready := false
 		for _, evt := range events {
@@ -153,10 +155,10 @@ func (h *Handler) ContinueStream(c *gin.Context) {
 		len(events), sessionID, messageID,
 	)
 
-	// Set headers for SSE
+	// 设置 SSE 响应头
 	setSSEHeaders(c)
 
-	// Check if stream is already completed
+	// 检查流是否已经完成
 	streamCompleted := false
 	for _, evt := range events {
 		if evt.Type == "complete" {
@@ -165,21 +167,21 @@ func (h *Handler) ContinueStream(c *gin.Context) {
 		}
 	}
 
-	// Replay existing events, a segment's worth of chunks per frame
+	// 回放已有事件，每帧合并一个分段内的 chunk
 	replay := coalesceReplayEvents(events)
 	logger.Debugf(ctx, "Replaying %d existing events as %d frames", len(events), len(replay))
 	for _, evt := range replay {
 		emitStreamEvent(ctx, c, evt, message.RequestID, resourceRewriter)
 	}
 
-	// If stream is already completed, send final event and return
+	// 流已完成，发送结束事件并返回
 	if streamCompleted {
 		logger.Infof(ctx, "Stream already completed, session ID: %s, message ID: %s", sessionID, messageID)
 		sendCompletionEvent(c, message.RequestID)
 		return
 	}
 
-	// Continue polling for new events
+	// 继续轮询新事件
 	logger.Debug(ctx, "Starting event update monitoring")
 	ticker := time.NewTicker(100 * time.Millisecond)
 	defer ticker.Stop()
@@ -196,7 +198,7 @@ func (h *Handler) ContinueStream(c *gin.Context) {
 			c.SSEvent("message", gin.H{"response_type": "heartbeat"})
 			c.Writer.Flush()
 		case <-ticker.C:
-			// Get new events from current offset
+			// 从当前偏移量获取新事件
 			newEvents, newOffset, err := h.streamManager.GetEvents(ctx, sessionID, messageID, currentOffset)
 			if err != nil {
 				logger.Errorf(ctx, "Failed to get new events: %v", err)
@@ -204,10 +206,10 @@ func (h *Handler) ContinueStream(c *gin.Context) {
 				return
 			}
 
-			// Send new events
+			// 发送新事件
 			streamCompletedNow := false
 			for _, evt := range newEvents {
-				// Check for completion event
+				// 检查是否是结束事件
 				if evt.Type == "complete" {
 					streamCompletedNow = true
 				}
@@ -215,10 +217,10 @@ func (h *Handler) ContinueStream(c *gin.Context) {
 				emitStreamEvent(ctx, c, evt, message.RequestID, resourceRewriter)
 			}
 
-			// Update offset
+			// 更新偏移量
 			currentOffset = newOffset
 
-			// If stream completed, send final event and exit
+			// 流已完成，发送结束事件并退出
 			if streamCompletedNow {
 				logger.Infof(ctx, "Stream completed, session ID: %s, message ID: %s", sessionID, messageID)
 				sendCompletionEvent(c, message.RequestID)
@@ -250,7 +252,7 @@ func (h *Handler) StopSession(c *gin.Context) {
 		return
 	}
 
-	// Parse request body to get message_id
+	// 解析请求体以获取 message_id
 	var req StopSessionRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		logger.ErrorWithFields(ctx, err, map[string]interface{}{
@@ -263,7 +265,7 @@ func (h *Handler) StopSession(c *gin.Context) {
 	assistantMessageID := secutils.SanitizeForLog(req.MessageID)
 	logger.Infof(ctx, "Stop generation request for session: %s, message: %s", sessionID, assistantMessageID)
 
-	// Get tenant ID from context
+	// 从上下文中获取租户 ID
 	tenantID, exists := c.Get(types.TenantIDContextKey.String())
 	if !exists {
 		logger.Error(ctx, "Failed to get tenant ID")
@@ -272,7 +274,7 @@ func (h *Handler) StopSession(c *gin.Context) {
 	}
 	tenantIDUint := tenantID.(uint64)
 
-	// Verify message ownership and status
+	// 校验消息归属与状态
 	message, err := h.messageService.GetMessage(ctx, sessionID, assistantMessageID)
 	if err != nil {
 		logger.ErrorWithFields(ctx, err, map[string]interface{}{
@@ -283,16 +285,16 @@ func (h *Handler) StopSession(c *gin.Context) {
 		return
 	}
 
-	// Verify message belongs to this session (double check)
+	// 再次确认消息属于该会话
 	if message.SessionID != sessionID {
 		logger.Warnf(ctx, "Message %s does not belong to session %s", assistantMessageID, sessionID)
 		c.JSON(403, gin.H{"error": "Message does not belong to this session"})
 		return
 	}
 
-	// Verify message belongs to the current tenant. Stopping generation mutates
-	// an in-flight run, so use the strict owner scope: a tenant admin may read an
-	// API-key session but must not be able to interrupt its (external) API calls.
+	// 校验消息属于当前租户。停止生成会修改正在运行的任务，因此这里使用
+	// 严格的所有者范围：租户管理员可以读取 API Key 创建的会话，但不得中断
+	// 其（外部）API 调用。
 	session, err := h.sessionService.GetOwnedSession(ctx, sessionID)
 	if err != nil {
 		logger.ErrorWithFields(ctx, err, map[string]interface{}{
@@ -315,7 +317,7 @@ func (h *Handler) StopSession(c *gin.Context) {
 		}
 	}
 
-	// Check if message is already completed (stopped)
+	// 检查消息是否已经完成（已停止）
 	if message.IsCompleted {
 		logger.Infof(ctx, "Message %s is already completed, no need to stop", assistantMessageID)
 		c.JSON(200, gin.H{
@@ -325,7 +327,7 @@ func (h *Handler) StopSession(c *gin.Context) {
 		return
 	}
 
-	// Write stop event to StreamManager for distributed support
+	// 向 StreamManager 写入停止事件，以支持分布式部署
 	stopEvent := interfaces.StreamEvent{
 		ID:        fmt.Sprintf("stop-%d", time.Now().UnixNano()),
 		Type:      types.ResponseType(event.EventStop),
@@ -356,10 +358,10 @@ func (h *Handler) StopSession(c *gin.Context) {
 	})
 }
 
-// handleAgentEventsForSSE handles agent events for SSE streaming using an existing handler
-// The handler is already subscribed to events and AgentQA is already running
-// This function polls StreamManager and pushes events to SSE, allowing graceful handling of disconnections
-// waitForTitle: if true, wait for title event after completion (for new sessions without title)
+// handleAgentEventsForSSE 使用已有的 handler 处理 SSE 流式过程中的智能体事件。
+// 该 handler 已订阅事件，且 AgentQA 已在运行。
+// 本函数轮询 StreamManager 并把事件推送到 SSE，从而能够优雅处理连接断开。
+// waitForTitle：为 true 时在完成后等待标题事件（适用于尚无标题的新会话）。
 func (h *Handler) handleAgentEventsForSSE(
 	ctx context.Context,
 	c *gin.Context,
@@ -375,10 +377,9 @@ func (h *Handler) handleAgentEventsForSSE(
 
 	lastOffset := 0
 	log := logger.GetLogger(ctx)
-	// Agent mode releases the sandbox turn lease, and therefore cancels ctx,
-	// before the completion event is published. Polling Redis with that
-	// context drops the terminal event and the client waits at the end of
-	// the answer. Client disconnect is still observed on the request below.
+	// Agent 模式会在完成事件发布之前释放沙箱回合租约，从而取消 ctx。
+	// 用这个 context 轮询 Redis 会丢掉终结事件，导致客户端一直卡在
+	// 回答末尾等待。客户端断开仍可通过下面的请求 context 观察到。
 	pollCtx := context.WithoutCancel(ctx)
 
 	log.Infof("Starting pull-based SSE streaming for session=%s, message=%s", sessionID, assistantMessageID)
@@ -386,7 +387,7 @@ func (h *Handler) handleAgentEventsForSSE(
 	for {
 		select {
 		case <-c.Request.Context().Done():
-			// Connection closed, exit gracefully without panic
+			// 连接已关闭，优雅退出，不触发 panic
 			log.Infof(
 				"Client disconnected, stopping SSE streaming for session=%s, message=%s",
 				sessionID,
@@ -398,22 +399,22 @@ func (h *Handler) handleAgentEventsForSSE(
 			c.SSEvent("message", gin.H{"response_type": "heartbeat"})
 			c.Writer.Flush()
 		case <-ticker.C:
-			// Get new events from StreamManager using offset
+			// 按偏移量从 StreamManager 获取新事件
 			events, newOffset, err := h.streamManager.GetEvents(pollCtx, sessionID, assistantMessageID, lastOffset)
 			if err != nil {
 				log.Warnf("Failed to get events from stream: %v", err)
 				continue
 			}
 
-			// Send any new events
+			// 发送所有新事件
 			streamCompleted := false
 			titleReceived := false
 			for _, evt := range events {
-				// Check for stop event
+				// 检查是否是停止事件
 				if evt.Type == types.ResponseType(event.EventStop) {
 					log.Infof("Detected stop event, triggering stop via EventBus for session=%s", sessionID)
 
-					// Emit stop event to the EventBus to trigger context cancellation
+					// 向 EventBus 广播停止事件，以触发上下文取消
 					if eventBus != nil {
 						eventBus.Emit(ctx, event.Event{
 							Type:      event.EventStop,
@@ -426,13 +427,12 @@ func (h *Handler) handleAgentEventsForSSE(
 						})
 					}
 
-					// Release any buffered tail first: the answer generated
-					// before the stop is still the user's content, and in
-					// public resource URL mode part of it may be sitting in
-					// the holdback buffer.
+					// 先释放缓冲的尾部内容：停止前已生成的答案仍是用户的内容，
+					// 在 public 资源 URL 模式下，其中一部分可能还留在
+					// holdback 缓冲区里。
 					flushHeldStreamContent(ctx, c, requestID, resourceRewriter)
 
-					// Send stop notification to frontend
+					// 向前端发送停止通知
 					c.SSEvent("message", &types.StreamResponse{
 						ID:           requestID,
 						ResponseType: "stop",
@@ -443,20 +443,19 @@ func (h *Handler) handleAgentEventsForSSE(
 					return
 				}
 
-				// Check for completion event
+				// 检查是否是结束事件
 				if evt.Type == "complete" {
 					streamCompleted = true
 				}
 
-				// Check for title event
+				// 检查是否是标题事件
 				if evt.Type == types.ResponseTypeSessionTitle {
 					titleReceived = true
 				}
 
-				// Check if connection is still alive before writing. Build the
-				// payload only after this check: in public resource URL mode
-				// building consumes the chunk into the holdback buffer, so an
-				// early return here would drop it.
+				// 写事件前先确认连接仍然存活。必须在检查之后再构建载荷：
+				// 在 public 资源 URL 模式下，构建载荷会把 chunk 消费进
+				// holdback 缓冲区，若在此处提前返回就会丢掉它。
 				if c.Request.Context().Err() != nil {
 					log.Info("Connection closed during event sending, stopping")
 					return
@@ -465,14 +464,14 @@ func (h *Handler) handleAgentEventsForSSE(
 				emitStreamEvent(ctx, c, evt, requestID, resourceRewriter)
 			}
 
-			// Update offset
+			// 更新偏移量
 			lastOffset = newOffset
 
-			// Check if stream is completed - wait for title event only if needed and not already received
+			// 检查流是否完成——仅在需要且尚未收到标题事件时才等待
 			if streamCompleted {
 				if waitForTitle && !titleReceived {
 					log.Infof("Stream completed for session=%s, message=%s, waiting for title event", sessionID, assistantMessageID)
-					// Wait up to 3 seconds for title event after completion
+					// 完成后最多等待 3 秒以接收标题事件
 					titleTimeout := time.After(3 * time.Second)
 				titleWaitLoop:
 					for {
@@ -484,7 +483,7 @@ func (h *Handler) handleAgentEventsForSSE(
 							log.Info("Connection closed while waiting for title")
 							return
 						default:
-							// Check for new events (title event)
+							// 检查是否有新事件（标题事件）
 							events, newOff, err := h.streamManager.GetEvents(c.Request.Context(), sessionID, assistantMessageID, lastOffset)
 							if err != nil {
 								log.Warnf("Error getting events while waiting for title: %v", err)
@@ -493,7 +492,7 @@ func (h *Handler) handleAgentEventsForSSE(
 							if len(events) > 0 {
 								for _, evt := range events {
 									emitStreamEvent(ctx, c, evt, requestID, resourceRewriter)
-									// If we got the title, we can exit
+									// 收到标题事件即可退出
 									if evt.Type == types.ResponseTypeSessionTitle {
 										log.Infof("Title event received: %s", evt.Content)
 										break titleWaitLoop
@@ -501,7 +500,7 @@ func (h *Handler) handleAgentEventsForSSE(
 								}
 								lastOffset = newOff
 							} else {
-								// No events, wait a bit before checking again
+								// 没有事件，稍作等待后再检查
 								time.Sleep(100 * time.Millisecond)
 							}
 						}

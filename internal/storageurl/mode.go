@@ -28,11 +28,11 @@ const (
 )
 
 const (
-	// QueryParam is the request query parameter that selects the mode per call.
+	// QueryParam 是每次调用时可选的请求查询参数，用于指定引用的表示方式。
 	QueryParam = "resource_urls"
-	// EnvVar sets the deployment-wide default mode for requests that omit
-	// QueryParam. It sits alongside APP_EXTERNAL_URL, which is what actually
-	// makes `resource://` handles resolvable to a public `/r/<token>` URL.
+	// EnvVar 设置部署范围的默认模式，供未传 QueryParam 的请求使用。
+	// 它与 APP_EXTERNAL_URL 配套：后者才真正让 `resource://` 句柄
+	// 可解析为公开的 `/r/<token>` URL。
 	EnvVar = "RESOURCE_URL_MODE"
 )
 

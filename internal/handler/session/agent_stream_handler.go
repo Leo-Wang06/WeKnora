@@ -29,47 +29,45 @@ var _ SandboxIDLookup = (*sandbox.SessionBoundManager)(nil)
 
 var _ SandboxIDLookup = (*service.PinnedSessionSandbox)(nil)
 
-// AgentStreamHandler handles agent events for SSE streaming
-// It uses a dedicated EventBus per request to avoid SessionID filtering
-// Events are appended to StreamManager without accumulation
+// AgentStreamHandler 处理 SSE 流式过程中的 Agent 事件。
+// 每个请求使用独立的 EventBus，从而避免按 SessionID 过滤事件。
+// 事件原样追加到 StreamManager，不做累积。
 type AgentStreamHandler struct {
 	ctx                context.Context
 	sessionID          string
-	tenantID           uint64 // Tenant that owns this session; used when persisting skill artifacts.
+	tenantID           uint64 // 拥有该会话的租户；持久化技能产物时使用。
 	assistantMessageID string
 	requestID          string
-	receivedAt         time.Time // Handler entry timestamp, used for TTFB logging
-	ttfbLogged         bool      // Guards one-shot TTFB log on first answer chunk
+	receivedAt         time.Time // Handler 入口时间戳，用于 TTFB（首字节时间）日志。
+	ttfbLogged         bool      // 保证第一个答案 chunk 只记录一次 TTFB 日志。
 	assistantMessage   *types.Message
 	streamManager      interfaces.StreamManager
-	completionEvent    *interfaces.StreamEvent // Published only after the final message is persisted.
-	// suspension is set when the run ended waiting on a user prompt. The
-	// message then stays incomplete and the run is resumed later.
+	completionEvent    *interfaces.StreamEvent // 仅在最终消息持久化成功后才发布。
+	// suspension 在运行因等待用户回答而结束时设置。
+	// 此时消息保持未完成状态，稍后会恢复该运行。
 	suspension *types.PromptSuspension
 
 	eventBus *event.EventBus
 
-	// artifactCollector drains skill-generated files from the session
-	// sandbox after the agent completes. Nil when the sandbox backend
-	// doesn't support artifact collection or WeKnora was built without it.
+	// artifactCollector 在 Agent 完成后从会话沙箱中收集技能生成的文件。
+	// 当沙箱后端不支持产物收集，或构建时未包含该能力时为 nil。
 	artifactCollector *service.ArtifactCollector
 
-	// checkpointer commits the sandbox's /workspace at the end of the turn so
-	// session fork can roll a forked sandbox back to this exact message. Nil
-	// when the deployment has no sandbox backend; handleComplete checks.
+	// checkpointer 在回合结束时提交沙箱的 /workspace，使会话分叉能把
+	// 分叉出的沙箱回滚到这条消息对应的状态。部署未配置沙箱后端时为 nil，
+	// handleComplete 中会做检查。
 	checkpointer *service.WorkspaceCheckpointer
 
-	// sandboxIDLookup resolves the session's currently bound sandbox ID. The
-	// ID is stored next to the commit SHA because a SHA is only meaningful
-	// within one sandbox's git repository.
+	// sandboxIDLookup 解析会话当前绑定的沙箱 ID。该 ID 与 commit SHA 一起
+	// 保存，因为 SHA 只有在同一个沙箱的 git 仓库内才有意义。
 	sandboxIDLookup SandboxIDLookup
 
-	// State tracking
+	// 状态跟踪
 	toolApprovals   []types.ToolApprovalRecord
 	knowledgeRefs   []*types.SearchResult
 	finalAnswer     string
-	answerSegments  []*answerSegment     // Per-answer-event-ID accumulation, so superseded preambles can be dropped
-	eventStartTimes map[string]time.Time // Track start time for duration calculation
+	answerSegments  []*answerSegment     // 按答案事件 ID 累积，以便丢弃已被取代的前导文本
+	eventStartTimes map[string]time.Time // 记录各事件的开始时间，用于计算时长
 	mu              sync.Mutex
 }
 

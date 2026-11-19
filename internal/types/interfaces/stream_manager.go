@@ -7,72 +7,69 @@ import (
 	"github.com/Tencent/WeKnora/internal/types"
 )
 
-// StreamEvent represents a single event in the stream
+// StreamEvent 表示流中的单个事件
 type StreamEvent struct {
-	ID        string                 `json:"id"`              // Unique event ID
-	Type      types.ResponseType     `json:"type"`            // Event type (thinking, tool_call, complete, etc.)
-	Content   string                 `json:"content"`         // Event content (chunk for streaming events)
-	Done      bool                   `json:"done"`            // Whether this event is done
-	Timestamp time.Time              `json:"timestamp"`       // When this event occurred
-	Data      map[string]interface{} `json:"data,omitempty"`  // Additional event data (references, metadata, etc.)
-	Usage     *types.TokenUsage      `json:"usage,omitempty"` // LLM token usage aggregated over the turn (complete events)
+	ID        string                 `json:"id"`              // 事件唯一 ID
+	Type      types.ResponseType     `json:"type"`            // 事件类型（thinking、tool_call、complete 等）
+	Content   string                 `json:"content"`         // 事件内容（流式事件中为增量 chunk）
+	Done      bool                   `json:"done"`            // 该事件是否已完成
+	Timestamp time.Time              `json:"timestamp"`       // 事件发生的时间
+	Data      map[string]interface{} `json:"data,omitempty"`  // 附加事件数据（引用、元数据等）
+	Usage     *types.TokenUsage      `json:"usage,omitempty"` // 整个回合聚合的 LLM token 用量（complete 事件）
 }
 
-// StreamManager stream manager interface - minimal append-only design
-// All stream state is managed through events: metadata, references, completion, etc.
+// StreamManager 流管理器接口——极简的只追加（append-only）设计。
+// 所有流状态都通过事件管理：元数据、引用、完成状态等。
 type StreamManager interface {
-	// AppendEvent appends a single event to the stream
-	// Uses Redis RPush for O(1) append performance
-	// All event types (thinking, tool_call, references, complete) use this method
+	// AppendEvent 向流中追加单个事件。
+	// 使用 Redis RPush 实现 O(1) 的追加性能。
+	// 所有事件类型（thinking、tool_call、references、complete）都走这个方法。
 	AppendEvent(ctx context.Context, sessionID, messageID string, event StreamEvent) error
 
-	// GetEvents gets events starting from offset
-	// Uses Redis LRange for incremental reads
-	// Returns: events slice, next offset for subsequent reads, error
+	// GetEvents 从 offset 开始读取事件。
+	// 使用 Redis LRange 做增量读取。
+	// 返回：事件切片、供后续读取使用的下一个 offset、错误。
 	GetEvents(ctx context.Context, sessionID, messageID string, fromOffset int) ([]StreamEvent, int, error)
 
-	// ResetEvents drops a message's stream events so a run resumed into the
-	// same message starts a fresh stream. Steer events are kept.
+	// ResetEvents 丢弃某条消息的流事件，使恢复运行到同一条消息时
+	// 从全新的流开始。Steer 事件会被保留。
 	ResetEvents(ctx context.Context, sessionID, messageID string) error
 
-	// AppendSteerEvents appends control events (steer instructions) to a
-	// dedicated per-run sub-list that is never surfaced on the SSE stream.
-	// Producers are incoming "append a message to the running turn" HTTP
-	// requests; the only consumer is the running turn itself.
+	// AppendSteerEvents 把控制事件（steer 指令）追加到每个运行专用的
+	// 子列表中，该子列表不会出现在 SSE 流上。生产方是“向运行中的回合
+	// 追加消息”的 HTTP 请求；唯一的消费方是正在运行的那个回合本身。
 	AppendSteerEvents(ctx context.Context, sessionID, messageID string, events []StreamEvent) error
 
-	// GetSteerEvents drains the steer sub-list starting fromOffset, mirroring
-	// GetEvents semantics. An absent list is an empty result, not an error.
+	// GetSteerEvents 从 fromOffset 开始排空 steer 子列表，语义与
+	// GetEvents 一致。子列表不存在时返回空结果，而不是错误。
 	GetSteerEvents(ctx context.Context, sessionID, messageID string, fromOffset int) ([]StreamEvent, int, error)
 
-	// UpdateSteerEventData merges keys into a queued steer event's Data map
-	// (promote to inject, mark consumed). Returns false when the event is
-	// missing. Implementations must apply the change atomically so a
-	// concurrent AppendSteerEvents cannot be lost.
+	// UpdateSteerEventData 把若干键合并进排队中的 steer 事件的 Data map
+	//（提升为 inject、标记已消费）。事件不存在时返回 false。
+	// 实现必须原子地应用这次修改，否则并发的 AppendSteerEvents 可能丢失。
 	UpdateSteerEventData(
 		ctx context.Context, sessionID, messageID, eventID string, data map[string]interface{},
 	) (bool, error)
 
-	// DeleteSteerEvent removes a queued steer event by ID. Returns false when
-	// the event is missing. Used when the user dismisses an overlay item.
+	// DeleteSteerEvent 按 ID 删除排队中的 steer 事件。事件不存在时返回
+	// false。用于用户关闭浮层中的条目。
 	DeleteSteerEvent(ctx context.Context, sessionID, messageID, eventID string) (bool, error)
 
-	// SetLiveRun records which assistant message is currently generating for
-	// a session. It is exclusive: if another assistant is already live, it
-	// returns an error so executeQA cannot start a second engine. Calling it
-	// again for the same assistant is a no-op. Follow-up handoff that must
-	// replace the previous run uses ClaimLiveRun.
+	// SetLiveRun 记录某个会话当前正在生成的 assistant 消息。它是排他的：
+	// 如果已有另一个 assistant 处于 live 状态，则返回错误，防止 executeQA
+	// 启动第二个引擎。对同一个 assistant 重复调用是 no-op。
+	// 需要替换上一次运行的后续交接应使用 ClaimLiveRun。
 	SetLiveRun(ctx context.Context, sessionID, assistantMessageID, requestID string) error
 
-	// ClaimLiveRun overwrites the live-run marker. Used when a finishing
-	// turn hands the session to a follow-up before it CAS-clears itself.
+	// ClaimLiveRun 覆盖 live-run 标记。用于正在结束的回合先把自己
+	// 交接给后续运行、再由后续运行 CAS 清除标记的场景。
 	ClaimLiveRun(ctx context.Context, sessionID, assistantMessageID, requestID string) error
 
-	// GetLiveRun returns the session's generating assistant message, or empty
-	// strings when no run is marked live.
+	// GetLiveRun 返回会话中正在生成的 assistant 消息；没有标记为
+	// live 的运行则返回空字符串。
 	GetLiveRun(ctx context.Context, sessionID string) (assistantMessageID, requestID string, err error)
 
-	// ClearLiveRun drops the marker, but only when it still points at
-	// assistantMessageID: a follow-up run may already have replaced it.
+	// ClearLiveRun 清除标记，但仅当它仍指向 assistantMessageID 时才清除：
+	// 后续运行可能已经替换了它。
 	ClearLiveRun(ctx context.Context, sessionID, assistantMessageID string) error
 }

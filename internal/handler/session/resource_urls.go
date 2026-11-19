@@ -40,8 +40,8 @@ func streamPausesForUser(eventType types.ResponseType) bool {
 	}
 }
 
-// resourceModeError turns a mode-resolution failure into the response the client
-// should see: a rejected scope is a 403, a typo in the parameter is a 400.
+// resourceModeError 把模式解析失败转换成客户端应看到的响应：
+// 权限范围被拒绝返回 403，参数拼写错误返回 400。
 func resourceModeError(err error) error {
 	if stderrors.Is(err, storageurl.ErrPublicModeForbidden) {
 		return errors.NewForbiddenError(err.Error())
@@ -49,13 +49,12 @@ func resourceModeError(err error) error {
 	return errors.NewBadRequestError(err.Error())
 }
 
-// resolveResourceRewriter builds the storage-reference rewriter for one response
-// from the request's `resource_urls` parameter, falling back to the deployment
-// default. The returned error is already an AppError the caller can hand to
-// c.Error.
+// resolveResourceRewriter 根据请求的 `resource_urls` 参数，为单个响应构建
+// 存储引用重写器；参数缺省时回退到部署默认值。返回的错误已经是 AppError，
+// 调用方可以直接交给 c.Error 处理。
 //
-// In the default handle mode the returned rewriter is disabled, so responses are
-// left exactly as before.
+// 在默认的 handle 模式下，返回的重写器处于禁用状态，因此响应内容与以往完全
+// 一致。
 func (h *Handler) resolveResourceRewriter(c *gin.Context) (*storageurl.Rewriter, error) {
 	ctx := c.Request.Context()
 	mode, err := storageurl.ResolveMode(ctx, c.Query(storageurl.QueryParam))
@@ -65,10 +64,9 @@ func (h *Handler) resolveResourceRewriter(c *gin.Context) (*storageurl.Rewriter,
 	return storageurl.NewRequestRewriter(ctx, mode, h.fileService, h.storageResolver), nil
 }
 
-// resolveStreamRewriter is resolveResourceRewriter plus the holdback buffer an
-// SSE response needs, because a storage reference can straddle two deltas. It
-// must be called before any SSE header is written so an invalid value is still
-// reportable as a normal JSON error.
+// resolveStreamRewriter 相当于 resolveResourceRewriter 再加上 SSE 响应所需的
+// holdback 缓冲区，因为一个存储引用可能横跨两次增量（delta）。它必须在写出
+// 任何 SSE 响应头之前调用，这样非法值仍能以普通 JSON 错误的形式返回。
 func (h *Handler) resolveStreamRewriter(c *gin.Context) (*storageurl.StreamRewriter, error) {
 	rewriter, err := h.resolveResourceRewriter(c)
 	if err != nil {

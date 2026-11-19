@@ -38,19 +38,26 @@ export function reconcileSteerMessageId(list: ChatMessage[], clientId: string, s
 }
 
 /**
- * The row id the server knows this assistant message by.
+ * 取出“后端认识的那个 ID”，也就是这条 assistant 消息在数据库里的真实 ID。
  *
- * A turn that absorbed a mid-run message is shown as several assistant
- * segments, and every segment after the first carries a synthetic id so Vue
- * can key the list. Only the persisted id addresses a real message, so
- * anything that talks to the backend — continue-stream, stop, artifacts —
- * must resolve through here rather than reading `id` directly.
+ * 为什么需要它：Agent 还在回答的时候，用户可能又插了一条消息，
+ * 这一轮回复在界面上就会被拆成好几段 assistant 消息。
+ * 除了第一段，后面每一段的 id 都是前端临时编的假 ID，只是为了让 Vue 渲染列表时
+ * 有个唯一的 key，后端根本不认识。
+ *
+ * 所以凡是要和后端打交道的操作（继续流式输出、停止生成、获取产物等），
+ * 都必须通过这个函数取 ID，不能直接读 `id`，否则后面几段会拿假 ID 去找后端，找不到。
  */
 export function persistedAssistantId(message: ChatMessage | undefined): string {
+  // 没有消息对象（如事件找不到对应的回合）：返回空串，调用方据此判断“无可用 ID”。
   if (!message) return ''
+  // 优先用 assistant_message_id：被拆出来的后续片段，其 id 是前端合成的，
+  // 只有这个字段才指向数据库里真实存在的那条 assistant 消息。
   if (typeof message.assistant_message_id === 'string' && message.assistant_message_id) {
     return message.assistant_message_id
   }
+  // 回退到 id：第一个片段（或未拆分的普通消息）的 id 本身就是真实消息 ID。
+  // id 不是字符串（缺失/异常）时同样返回空串。
   return typeof message.id === 'string' ? message.id : ''
 }
 
@@ -70,6 +77,12 @@ export function sealAssistantSegment(message: ChatMessage): void {
   }
 }
 
+/**
+ * forkAfterInjectedUser 的作用是:
+ * 用户在 agent 回答途中插了一条消息(steer)时,
+ * 把当前这条助手气泡截断,把用户消息放到它后面,
+ * 再给后续输出开一个新的助手气泡。 
+ */
 export function forkAfterInjectedUser(
   list: ChatMessage[],
   sourceAssistant: ChatMessage,
@@ -291,8 +304,30 @@ export function steerStepEvents(step: ChatMessage): ChatMessage[] {
   return events
 }
 
-/** Rebuild the current stream generation. Approval continuations replay only
- * their suffix, so retain an immutable baseline for each presentation segment. */
+/**
+ * 重放事件之前，先把这一轮的 assistant 消息“清理干净”，并选出接下来要往里写内容的那一段。
+ *
+ * 背景：同一次请求的回复，可能因为用户中途插话被拆成好几段 assistant 消息。
+ * 刷新页面接着看，或者审批通过后继续跑，后端会把事件再发一遍。
+ * 如果界面上已经有这一轮的旧内容，不清理就会出现重复内容。
+ *
+ * 分两种情况：
+ * 1. 没有 resumeId（普通重放，如刷新后接着看）：
+ *    后端会从头重发所有事件，所以把这一轮每一段都清空（正文、事件列表都清掉），
+ *    然后从第一段开始重新写。
+ * 2. 有 resumeId（审批/提问通过后继续）：
+ *    后端只会补发“卡住的那个工具调用”之后的事件，之前的内容不会再发。
+ *    所以要先把卡住位置之前的事件备份下来（存在 _resumeReplayEvents），
+ *    清空后再把备份放回去，这部分内容才不会丢。
+ *    如果同一个 resumeId 已经备份过，就不重复备份（现在的内容已经混入了重放的新事件）。
+ *
+ * @param list 当前的消息列表
+ * @param requestId 这一轮的请求 ID，用它找出属于这一轮的所有 assistant 分段
+ * @param resumeId 恢复时等待的审批/提问 ID，普通重放时为空
+ * @param blockedCallId 卡在审批上的那个工具调用 ID，用来确定“从哪里断开”
+ * @returns 接下来要继续写入的那一段（会被标记为“未完成”）；
+ *          如果没有请求 ID 或找不到这一轮的消息，返回 undefined
+ */
 export function resetSteerTurnForReplay(
   list: ChatMessage[], requestId: string, resumeId = '', blockedCallId = '',
 ): ChatMessage | undefined {

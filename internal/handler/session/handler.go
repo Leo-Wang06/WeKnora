@@ -19,63 +19,60 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-// Handler handles all HTTP requests related to conversation sessions
+// Handler 处理所有与会话相关的 HTTP 请求
 type Handler struct {
 	browserSkill         *browserskill.Manager
-	messageService       interfaces.MessageService // Service for managing messages
+	messageService       interfaces.MessageService // 消息管理服务
 	suggestionService    interfaces.MessageSuggestionService
-	sessionService       interfaces.SessionService       // Service for managing sessions
-	streamManager        interfaces.StreamManager        // Manager for handling streaming responses
-	config               *config.Config                  // Application configuration
-	knowledgebaseService interfaces.KnowledgeBaseService // Service for managing knowledge bases
-	customAgentService   interfaces.CustomAgentService   // Service for managing custom agents
-	tenantService        interfaces.TenantService        // Service for loading tenant (shared agent context)
-	agentShareService    interfaces.AgentShareService    // Service for resolving shared agents (KB scope in retrieval)
-	kbShareService       interfaces.KBShareService       // Service for resolving shared KB permissions
-	fileService          interfaces.FileService          // Service for file storage (image uploads)
+	sessionService       interfaces.SessionService       // 会话管理服务
+	streamManager        interfaces.StreamManager        // 流式响应管理器
+	config               *config.Config                  // 应用配置
+	knowledgebaseService interfaces.KnowledgeBaseService // 知识库管理服务
+	customAgentService   interfaces.CustomAgentService   // 自定义智能体管理服务
+	tenantService        interfaces.TenantService        // 租户加载服务（共享智能体上下文）
+	agentShareService    interfaces.AgentShareService    // 共享智能体解析服务（检索范围内的知识库）
+	kbShareService       interfaces.KBShareService       // 共享知识库权限解析服务
+	fileService          interfaces.FileService          // 文件存储服务（图片上传）
 	resourceCatalog      interfaces.ResourceCatalog
 	storageResolver      interfaces.StorageBackendResolver
-	modelService         interfaces.ModelService // Service for model management (VLM access)
-	attachmentProcessor  *AttachmentProcessor    // Processor for file attachments
+	modelService         interfaces.ModelService // 模型管理服务（VLM 访问）
+	attachmentProcessor  *AttachmentProcessor    // 文件附件处理器
 	temporaryDocuments   interfaces.TemporaryDocumentService
-	// artifactCollector drains skill-generated files from the session sandbox
-	// after an agent turn completes. May be nil when the sandbox backend does
-	// not support artifact collection; handlers must check before using.
+	// artifactCollector 在智能体回合结束后从会话沙箱中收集技能产出的文件。
+	// 当沙箱后端不支持产物收集时可能为 nil，处理逻辑使用前必须检查。
 	artifactCollector *service.ArtifactCollector
-	// workspaceCheckpointer commits the sandbox /workspace at the end of each
-	// agent turn so session fork can roll back to a specific message. May be
-	// nil when the deployment has no sandbox backend.
+	// workspaceCheckpointer 在每个智能体回合结束时提交沙箱中的 /workspace，
+	// 使会话分叉能够回滚到指定消息。部署未配置沙箱后端时可能为 nil。
 	workspaceCheckpointer *service.WorkspaceCheckpointer
-	// sandboxIDLookup resolves a session's bound sandbox without provisioning.
+	// sandboxIDLookup 在不进行沙箱创建的前提下，解析会话绑定的沙箱。
 	sandboxIDLookup SandboxIDLookup
-	memoryService   interfaces.MemoryService // Service for cross-session long-term memory
-	// userService / memberService back the sandbox terminal's self-contained
-	// handshake (browser WebSocket upgrades cannot send Authorization).
+	memoryService   interfaces.MemoryService // 跨会话长期记忆服务
+	// userService / memberService 支撑沙箱终端的自包含握手
+	//（浏览器发起的 WebSocket 升级请求无法携带 Authorization）。
 	userService   interfaces.UserService
 	memberService interfaces.TenantMemberService
-	// terminalService opens PTYs on the sandbox bound to a session. It also
-	// owns first-use provisioning: the WS handshake carries the chat page's
-	// selected agent so the sandbox is created with the same config a
-	// conversation turn would use.
+	// terminalService 在会话绑定的沙箱上打开 PTY，同时负责首次使用时的
+	// 沙箱创建：WS 握手会携带聊天页选中的智能体，使沙箱按与对话回合
+	// 相同的配置创建。
 	terminalService *service.SandboxTerminalService
 	desktopService  *service.SandboxDesktopService
 	desktopTickets  service.SandboxDesktopTicketStore
 	desktopLast     service.SandboxDesktopLastStore
-	// redis backs the distributed desktop slot. Nil in Lite mode, where the
-	// in-process limiter is the correct degradation.
+	// redis 支撑分布式的桌面槽位。Lite 模式下为 nil，
+	// 此时进程内限流器就是正确的降级方案。
 	redis *redis.Client
-	// forkService branches a session at a chosen user message. May be nil in
-	// deployments where fork is not wired; ForkSession checks.
+	// forkService 在选定的用户消息处派生会话。部署未接入分叉功能时可能为
+	// nil，ForkSession 中会做检查。
 	forkService sessionForker
-	// rewindService truncates the current session at a chosen message. May
-	// be nil in deployments where rewind is not wired; RewindSession checks.
+	// rewindService 在选定的消息处截断当前会话。部署未接入回退功能时可能
+	// 为 nil，RewindSession 中会做检查。
 	rewindService sessionRewinder
-	// approvedProjectDirs is the user-approved ProjectDirs list used to
-	// validate CreateSession's optional project_dir. Nil means none are
-	// approved, so a non-empty project_dir is rejected.
+	// approvedProjectDirs 是用户已批准的 ProjectDirs 列表，用于校验
+	// CreateSession 可选的 project_dir。为 nil 表示没有任何已批准目录，
+	// 此时非空的 project_dir 会被拒绝。
 	approvedProjectDirs HostProjectDirsLoader
-	// promptBroker and suspendedRuns resume and supersede runs suspended on
-	// agent prompts. Nil leaves suspended prompts to the reaper.
+	// promptBroker 与 suspendedRuns 负责恢复和取代因智能体提问而挂起的运行。
+	// 为 nil 时，挂起的提问交由 reaper 处理。
 	promptBroker      *hitl.Broker
 	suspendedRuns     *service.SuspendedRunService
 	stopCollaboration func(context.Context, string, string) error
