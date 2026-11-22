@@ -77,6 +77,7 @@ export function isPromptCard(e: ChatMessage | undefined): boolean {
   return PROMPT_CARD_TYPES.has(String(e?.type || ''))
 }
 
+/**是否此次 assistant 消息是否正在等待用户输入 */
 export function isAwaitingInput(message: ChatMessage | undefined): boolean {
   return message?.run_state === AWAITING_INPUT
 }
@@ -598,10 +599,10 @@ export function useChatStreamHandler(options: UseChatStreamHandlerOptions) {
   }
 
   /**
-   * Readies a suspended message to stream again after its prompt was answered
-   * and the server resumed the run. The resumed stream carries only new events,
-   * so the timeline built from history stays and the blocked tool call is
-   * dropped: the resumed run reports it afresh.
+   * 在提示（审批、提问）被回答、服务端已恢复运行之后，
+   * 让一条处于挂起状态的消息重新进入"可接收流式数据"的状态。
+   * 恢复后的流只携带新事件，所以由历史构建出的时间线要保留，
+   * 而之前被阻塞的那次工具调用要删掉：恢复后的运行会重新上报它。
    */
   const prepareResumedMessage = (message: ChatMessage, pendingId: string) => {
     const stream = (message.agentEventStream as ChatMessage[] | undefined) || []

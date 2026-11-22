@@ -6,18 +6,22 @@ import { isHostApprovalEvent } from '@/views/chat/components/hostApproval'
 type PromptEvent = Record<string, any>
 type ChatRow = Record<string, unknown>
 
+/**提示类型 */
 const DOCKED_TYPES = new Set(['tool_approval_required', 'agent_prompt_required', 'mcp_oauth_required'])
 
 // Answers given on this page, by pending id. The stream reports a prompt
 // resolved only once its run consumes the answer, which for a suspended run
 // is after it resumes; until then this keeps the prompt out of the dock and
 // lets its timeline row show what was sent.
+/**本页已有的提交记录，一个响应式 map，键是 pending_id，值是用户提交的答案。 */
 const submissions = reactive(new Map<string, Record<string, unknown>>())
 
+/**写入 submissions */
 export function markPromptSubmitted(pendingId: string, answer: Record<string, unknown> = {}) {
   submissions.set(pendingId, answer)
 }
 
+/**读取 submissions */
 export function promptSubmission(pendingId: string): Record<string, unknown> | undefined {
   return submissions.get(pendingId)
 }
@@ -42,14 +46,16 @@ function isDockable(e: PromptEvent): boolean {
  */
 export function pendingPrompts(messages: ChatRow[]): PromptEvent[] {
   const out: PromptEvent[] = []
+  /**先收集 liveTurns：所有"未完成、或正在等待输入"的 assistant 消息，
+   * 取它们的持久化 ID（persistedAssistantId）。这些是仍然活着的运行。 */
   const liveTurns = new Set(messages
     .filter(m => m.role === 'assistant' && (!m.is_completed || isAwaitingInput(m)))
     .map(persistedAssistantId).filter(Boolean))
   const seen = new Set<string>()
   for (const message of messages) {
     if (message.role !== 'assistant') continue
-    // Steering seals a display segment, not the parent run or its children.
-    // Keep that segment's cards actionable while its continuation is live.
+    // steer 封住的是一个显示分段，不是父运行，也不是它的子任务。
+    // 只要这个分段的后续部分还活着，就让该分段里的卡片保持可操作。
     if (message.is_completed && !isAwaitingInput(message) &&
       !(message.steerForked && liveTurns.has(persistedAssistantId(message)))) continue
     for (const e of (message.agentEventStream as PromptEvent[] | undefined) || []) {

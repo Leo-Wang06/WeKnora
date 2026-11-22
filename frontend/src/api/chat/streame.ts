@@ -70,7 +70,33 @@ export function useStream() {
   let buffer: string[] = []
   let renderTimer: number | null = null
 
-  // 启动流式请求
+  /**
+   * 发起一次 SSE 流式请求，并把收到的每个数据块交给 `onChunk` 注册的回调。
+   * 返回的 Promise 在流结束（或出错、被停止）后才完成，所以调用方可以 `await` 它。
+   *
+   * 两种用法，由 `params.method` 决定：
+   * - POST：发送一条新消息。请求地址为 `${url}/${session_id}`，`query` 是用户输入的文本，
+   *   其余可选参数（知识库、智能体、@提及、图片、附件、页面上下文等）按需拼进请求体。
+   * - GET：接入一条已经存在的运行（如 continue-stream）。此时 `query` 不是文本，
+   *   而是助手消息 ID，拼成 `?message_id=...`；审批后恢复时还会带上 `resume_pending_id`。
+   *
+   * 执行流程：
+   * 1. 递增 `streamGeneration` 作为本次流的"代号"，重置 output / error，并把 `isStreaming` 置为 true。
+   *    之后所有回调都先比对代号，旧流被新流或 `stopStream` 取代后，它的数据和报错都会被忽略。
+   * 2. 取登录令牌（嵌入模式用 embed_token）。没有令牌就写入错误并停止，不发请求。
+   * 3. 通过 `fetchEventSource` 建立连接，请求头带上授权、语言、`X-Request-ID` 和 `X-Tenant-ID`（跨空间访问）。
+   * 4. 每收到一条消息：解析 JSON，记录 `agent_query` 里的助手消息 ID，
+   *    遇到 `complete` / `stop` / `error` 记为已终止，丢弃 `heartbeat`，其余数据交给 `onChunk` 的回调。
+   * 5. 401 时先刷新令牌再重放请求，用户看不到这次重试。
+   * 6. 断线恢复：仅当请求是 agent-chat 或 continue-stream、已拿到助手消息 ID、还没收到终止事件、
+   *    且不是嵌入模式时才启用。此时连接异常断开，或 30 秒没收到任何数据（含心跳），
+   *    会改用 GET 的 continue-stream 加上刚记下的助手消息 ID 重连，最多 8 次，间隔 1s、2s、4s，之后固定 5s。
+   *    已成功发出的 POST 永远不会被重发，避免重复提交消息。
+   * 7. 重连用尽或遇到其他错误：把错误写入 `error` 并调用 `stopStream`；
+   *    如果这条流已被取代，则不报错，也不影响新的流。
+   *
+   * 注意：函数本身没有返回值，结果通过 `isStreaming`、`isLoading`、`error` 和 `onChunk` 回调体现。
+   */
   const startStream = async (params: { session_id: any; query: any; knowledge_base_ids?: string[]; knowledge_ids?: string[]; tag_ids?: string[]; agent_enabled?: boolean; agent_id?: string; agent_source_tenant_id?: string | number; web_search_enabled?: boolean; local_browser_enabled?: boolean; summary_model_id?: string; reasoning_effort?: string; mcp_service_ids?: string[]; skill_names?: string[]; mentioned_items?: Array<{id: string; name: string; type: string; kb_type?: string; kb_id?: string; kb_name?: string; service_id?: string; skill_name?: string}>; images?: Array<{data: string}>; attachment_uploads?: Array<{data: string; file_name: string; file_size: number}>; attachment_ids?: string[]; suggestion_attribution?: { suggestion_set_id: string; question_id: string }; question_origin?: { knowledge_base_id: string; knowledge_id?: string }; page_context?: PageContextPayload; assistant_access?: AssistantAccessLevel; method: string; url: string; resume_pending_id?: string; embed_token?: string; embed_session_sig?: string; embed_visitor_id?: string }) => {
     const myGeneration = ++streamGeneration
     const streamAbort = controller

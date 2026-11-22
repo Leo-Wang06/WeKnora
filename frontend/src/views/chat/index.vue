@@ -312,6 +312,7 @@ const sandboxPanel = provideChatSandboxPanel();
 const { visible: referencesDrawerVisible, panelWidth: referencesPanelWidth } = referencesDrawer;
 
 const props = defineProps({
+    // 会话 ID 字符串
     session_id: { type: String, default: '' },
     agentId: { type: String, default: '' },
     embeddedMode: { type: Boolean, default: false },
@@ -371,11 +372,16 @@ const attachStreamDebugToMessage = (message) => {
     }
     message.debugRequest = payload;
 };
+// 读取当前路由
 const route = useRoute();
+// 操作路由
 const router = useRouter();
+/**当前会话 ID */
 const session_id = ref(props.session_id || route.params.chatid);
 watch(session_id, () => childTabs.reset(), { flush: 'sync' });
+/**保存当前打开会话的完整对象,即后端返回的会话信息(id、title、kind 等)。 */
 const currentSession = ref(null);
+/**表示当前会话是自动化任务产生的会话,而不是用户手动聊天的会话。 */
 const isAutomationSession = computed(() => currentSession.value?.kind === 'automation');
 const backgroundItems = ref([]);
 const viewingWorkId = ref('');
@@ -467,6 +473,7 @@ const loadSessionAndHydrate = async (sid) => {
 const inputFieldRef = ref();
 const created_at = ref('');
 const limit = ref(20);
+/**聊天页的消息列表，保存当前会话里所有要显示的消息，包括用户消息和 assistant 消息。 */
 const messagesList = reactive([]);
 provide(childAgentTaskLookupKey, task => findChildAgentTask(messagesList, task));
 const promptDock = providePromptDock(messagesList);
@@ -515,16 +522,19 @@ function canRewindMessage(messageId) {
 
 const FORK_PREFILL_KEY = 'weknora:fork-prefill'
 let forkInFlight = false
+/**当前是否有回退请求正在进行 */
 const rewindInFlight = ref(false)
+/**记录这次回退针对的原会话 ID(sourceSessionId)，结束后清空。它表示“锁的时哪个会话” */
 const rewindLockSessionId = ref('')
 const composerApprovals = computed(() =>
     pendingComposerApprovals.value.filter((item) => item && !item.resolved && isHostApprovalEvent(item))
 )
 
+/**计算“输入框要不要锁住”。结果为 true 就锁 */
 const composerLocked = computed(() =>
     isAutomationSession.value || (rewindInFlight.value && String(session_id.value || '') === rewindLockSessionId.value)
+    
 )
-
 function stashForkLanding(sessionId, text) {
     const payload = JSON.stringify({ sessionId, text })
     try {
@@ -717,9 +727,12 @@ function handleArtifactDeleted({ messageId, index }) {
 const sessionArtifactsCollecting = computed(() =>
     messagesList.some((message) => isCollectingSkillArtifacts(message)),
 );
+/**steer 消息队列，保存当前会话已经发出、但是还没有确认处理完的 steer 消息 */
 const steerQueue = ref([]);
+/**这个会话里的 assistant 回答是否正在生成 */
 const isReplying = ref(false);
-const currentAssistantMessageId = ref(''); // 当前正在生成的 assistant message ID
+/**当前正在生成的 assistant message ID */
+const currentAssistantMessageId = ref(''); 
 // True only while attaching to an in-flight *IM-originated* reply via continue-stream.
 // Such replies are generated on the IM side and never stream through this server, so
 // continue-stream always fails even though the answer is coming — recover by polling
@@ -1062,7 +1075,23 @@ const fetchMessageList = (data) => getMessageList(data);
 // guards the hand-off window: a follow-up run publishes itself a moment before
 // its carried-over queue is readable, and treating that gap as "queue is
 // empty" would wipe messages the user can still see.
-const hydrateSteerQueue = async ({ onlyWhenLive = false } = {}) => {
+//
+// 服务端是"哪些消息仍在排队"的唯一可信来源。`onlyWhenLive` 用来防护交接的空窗期：
+// 后续运行会在它承接过来的队列可读之前，先一步发布自己；把这段空窗当成"队列为空"，
+// 就会清掉用户仍然能看到的消息。
+/**
+ * 用服务端数据重建前端的 steerQueue，用于刷新页面、重新进入会话或后续运行接管之后，
+ * 恢复服务端仍在排队的 steer 消息。
+ *
+ * 1. 请求 GET /sessions/:id/steer，取当前运行的待处理项和 assistant_message_id。
+ * 2. onlyWhenLive 为 true 且没有运行中的回答时直接返回，不改队列（避免交接空窗清空队列）。
+ * 3. 以服务端的项整体替换队列；本地标记为 failed 且服务端没有的项会保留，让用户仍可重试或删除。
+ * 4. 对其中 delivery 为 inject 的项补插预览气泡（previewSteerMessage 按 steer_id 去重）。
+ * 请求失败只在控制台告警，不改队列、不提示用户。
+ *
+ * @param options.onlyWhenLive 为 true 时，仅在服务端确有运行中的回答时才覆盖队列
+ */
+const hydrateSteerQueue =async ({ onlyWhenLive = false } = {}) => {
     if (!session_id.value) return;
     try {
         const res = await listSteerSession(session_id.value);
@@ -1270,30 +1299,50 @@ const handleStopFailed = () => {
     loading.value = true;
 };
 
+/**它删的是 steerQueue 里 steer_id 等于传入值的那一个队列项，不碰消息列表里的气泡。 */
 const dropSteerQueueItem = (steerId) => {
     if (!steerId) return;
     const idx = steerQueue.value.findIndex((item) => item.steer_id === steerId);
     if (idx >= 0) steerQueue.value.splice(idx, 1);
 };
 
+/**接受 steerID ，返回其对应的 steer 消息 */
 const findSteerQueueItem = (steerId) =>
     steerQueue.value.find((item) => item.steer_id === steerId);
 
-// Enter queues a follow-up; an explicit inject appears in the transcript immediately.
+/**
+ * 在 agent 运行途中追加一条用户消息（steer）。
+ * Enter 默认以 'after' 排队；显式 'inject' 会立即在对话中显示预览。
+ * 预览只是乐观展示，是否真正注入以服务端返回的 status / SSE 回执为准。
+ *
+ * @param value          消息文本
+ * @param mentionedItems @ 提及的知识库/文件等
+ * @param delivery       'inject'（注入当前运行）| 'after'（本轮结束后处理）
+ * @param retryId        重试失败项时传入其 steer_id，复用队列项而不新建
+ */
 const handleSteerMsg = async (value, mentionedItems = [], delivery = 'after', retryId = '') => {
+    // 如果对话框已上锁，则直接返回，不允许玩家追加消息
     if (composerLocked.value) return
+    // 为获取到当前会话 ID 或者 没有消息文本时直接返回
     if (!session_id.value || !value?.trim()) return;
+    // 如果没有正在生成的 assistant 会话，以及之前发送失败的 steer 消息的 steer_id 时，就走普通的 sendMsg
     if (!isReplying.value && !retryId) {
         // 空闲时没有运行中的 turn 可排队：直接走正常发送，而不是把
         // steering（服务端为 handleSteer/指定事务）当隐形 sendMsg 用。
         await sendMsg(value, '', mentionedItems);
         return;
     }
+    /**存储此次 session_id  */
     const requestSessionId = session_id.value;
+    /**有之前的 steer_id 则复用，没有则新建（首次发送） */
     const clientId = retryId || makeSteerClientId();
+    /**通过 steer_id 获取对应的 steer 消息 */
     const retryItem = retryId ? findSteerQueueItem(retryId) : null;
+    /**重试时沿用队列项里原来的值，首次发送则取 currentAssistantMessageId，也就是发送那一刻正在生成的那一轮。 */
     const expectedId = retryItem?.expected_assistant_message_id || currentAssistantMessageId.value;
+    // 有此次的 steer 消息就改变其状态为未完成
     if (retryItem) { retryItem.pending = true; retryItem.failed = false; }
+    // 没有则新建
     else steerQueue.value.push({
         steer_id: clientId,
         client_id: clientId,
@@ -1304,16 +1353,21 @@ const handleSteerMsg = async (value, mentionedItems = [], delivery = 'after', re
         pending: true,
     });
     if (delivery === 'inject') {
+        /**插入或取回预览气泡 */ 
         const preview = previewSteerMessage(messagesList, findSteerQueueItem(clientId));
+        /**删掉“发送失败”标记 */ 
         delete preview._steerFailed;
         scrollToBottom(true);
     }
     try {
+        /**服务端对这次 POST /steer 请求的处理结果 */
         const res = await steerSession(requestSessionId, value, mentionedItems, delivery, expectedId, clientId);
+        // 判断用户在等待响应期间有没有切换会话。
         if (session_id.value !== requestSessionId) return;
         const serverId = res?.steer_id || clientId;
         const received = reconcileSteerMessageId(messagesList, clientId, serverId);
         const queued = findSteerQueueItem(clientId);
+        // 如果有对账后的消息以及没有乐观预览标志，就说明送达到服务端的回执已到
         if (received && !received._steerPending) {
             // The SSE receipt can arrive before the HTTP response, including
             // when an older backend generated a different steer ID.
@@ -1325,6 +1379,7 @@ const handleSteerMsg = async (value, mentionedItems = [], delivery = 'after', re
             dropSteerQueueItem(serverId);
             const preview = messagesList.find(m => m.steer_id === serverId);
             if (preview) delete preview._steerPending;
+            // 给用户弹出一条信息提示（toast），内容是"该消息已被当前回答接收"。
             MessagePlugin.info(t('input.messages.steerAlreadyInjected'));
             return;
         }
@@ -1466,22 +1521,47 @@ const flushSteerAfterTurn = async (completedAssistantId) => {
     void attachSteerFollowUp(completedAssistantId);
 };
 
+/**
+ * 当前这一轮结束后，附着到服务端为排队的 after 消息自动启动的后续运行。
+ * 前端没有发起过这个运行，只能去找到它，再把流接上。
+ *
+ * 1. 没有未失败的队列项、已有一次附着在进行或没有会话时直接返回；否则进入"生成中"状态并上锁。
+ * 2. 最多轮询 40 次（间隔 200ms）取最近 30 条消息，找新的未完成 assistant：
+ *    排除 completedAssistantId，避免对刚结束的旧运行续流。
+ * 3. 找到后，按 request_id 认领属于新运行的用户消息：有预览气泡就原地合并，没有就追加；
+ *    已认领的队列项随后移除。
+ * 4. 调 hydrateSteerQueue 与服务端对账，再用新 assistant 的 ID 以 GET 调 continue-stream 接上流。
+ * 5. 收尾：会话已切换则不碰新会话的状态；没接上则复位并提示超时；
+ *    接上后队列里还有未失败的项，就递归附着下一个后续运行。
+ *
+ * @param completedAssistantId 刚结束的那一轮的 assistant 消息 ID，用于排除旧运行
+ */
 const attachSteerFollowUp = async (completedAssistantId) => {
+    /**最近几条没有失败的消息 */
     const queued = steerQueue.value.filter(item => !item.failed);
     if (!queued.length || attachingSteerFollowUp || !session_id.value) return;
+    /**记下出发时所在的会话 */
     const sessionId = session_id.value;
+    /**上锁，防止重复附着 */
     attachingSteerFollowUp = true;
+    /**标记"正在回答" */
     isReplying.value = true;
+    /**显示加载状态 */
     loading.value = true;
+    /**是否成功接上流 */
     let attached = false;
+    /**接上的那个 assistant ID */
     let attachedAssistantId = '';
+    /**判断用户是否切换会话 */
     const sessionChanged = () => session_id.value !== sessionId;
     try {
         for (let attempt = 0; attempt < 40; attempt++) {
             if (sessionChanged()) return;
+            /**获取此会话的消息列表 */ 
             const res = await getMessageList({ session_id: sessionId, limit: 30, created_at: '' });
             if (sessionChanged()) return;
             const batch = res?.data || [];
+            /**倒叙查找最新的一条 assistant 消息 */
             const newAssistant = [...batch].reverse().find((m) =>
                 m.role === 'assistant' && !m.is_completed && !isAwaitingInput(m) && m.id && m.id !== completedAssistantId
             );
@@ -1490,22 +1570,28 @@ const attachSteerFollowUp = async (completedAssistantId) => {
                 // request_id, so the new user rows are identified exactly.
                 // Matching on message text instead would attach the wrong
                 // bubble whenever the user sends the same thing twice.
+                /**记录这一次附着里已经被认领的队列项的 steer_id */
                 const claimed = new Set();
                 for (const persisted of batch) {
                     if (persisted.role !== 'user' || !persisted.id) continue;
                     if (persisted.request_id !== newAssistant.request_id) continue;
+                    // 这条服务端返回的用户消息，前端的 messagesList 里是不是已经有了。已经有就 continue，跳过它，不再重复处理。
                     if (messagesList.some((existing) => existing.id === persisted.id)) continue;
+                    // 找到消息的文本内容一致且没有被认领的消息
                     const queuedMatch = queued.find(
                         (q) => q.content === persisted.content && !claimed.has(q.steer_id)
                     );
                     if (queuedMatch) claimed.add(queuedMatch.steer_id);
                     const userRow = {
                         ...persisted,
+                        // mentioned_items 是用户在消息里用 @ 提及的对象列表，比如知识库、文件、标签、MCP 服务、技能。
                         mentioned_items: queuedMatch?.mentioned_items?.length
                             ? queuedMatch.mentioned_items
                             : persisted.mentioned_items,
                     };
+                    /**找这条队列项对应的乐观预览气泡 */
                     const preview = queuedMatch && messagesList.find(m => m.steer_id === queuedMatch.steer_id && m._steerPending);
+                    // 这段代码把服务端返回的用户消息放进前端的消息列表。有对应的预览气泡就原地改成真实消息，没有就追加一条新的。
                     if (preview) {
                         delete preview._steerPending;
                         delete preview._steerFailed;
@@ -1514,15 +1600,18 @@ const attachSteerFollowUp = async (completedAssistantId) => {
                     } else messagesList.push(userRow);
                 }
                 // Rows that made it into the transcript are no longer queued.
+                // 批量删除 steerQueue 的 steer_id 
                 for (const steerId of claimed) dropSteerQueueItem(steerId);
                 if (sessionChanged()) return;
                 // Then reconcile with the server, which owns the backlog that
                 // moved to the new run — but only once that run is visible.
+                // 用服务端的数据重新校准前端队列
                 await hydrateSteerQueue({ onlyWhenLive: true });
                 if (sessionChanged()) return;
 
                 currentAssistantMessageId.value = newAssistant.id;
                 attachedAssistantId = newAssistant.id;
+                // 用 GET 附着到服务端已经在跑的那个后续运行上，继续接收它的流。
                 await startStream({
                     session_id: sessionId,
                     query: newAssistant.id,
@@ -1554,6 +1643,21 @@ const attachSteerFollowUp = async (completedAssistantId) => {
     }
 };
 
+/**
+ * 发送一条普通用户消息，开始新一轮回答（agent 空闲时使用）。
+ * 运行中追加消息请用 handleSteerMsg。
+ *
+ * 流程：处理图片/附件上传 -> 把用户消息立即加入消息列表 ->
+ * 汇总知识库、@提及、模型、联网等设置 -> 调用 startStream 以 POST 打开 SSE 流，
+ * 由 agent-chat 或 knowledge-chat 接口返回回答。
+ *
+ * @param value           消息文本
+ * @param modelId         指定的摘要模型 ID，空则用默认
+ * @param mentionedItems  @ 提及的知识库/文件/标签/MCP/技能
+ * @param imageFiles      图片文件
+ * @param attachmentFiles 附件文件
+ * @param options         其他选项（如 questionOrigin）
+ */
 const sendMsg = async (value, modelId = '', mentionedItems = [], imageFiles = [], attachmentFiles = [], options = {}) => {
     if (!props.embeddedMode && !currentSession.value) {
         await loadSessionAndHydrate(session_id.value);
