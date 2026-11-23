@@ -2,10 +2,27 @@ import { markRaw } from 'vue'
 
 export type ChatMessage = Record<string, unknown>
 
-/** Display a steer immediately; the receipt, not this preview, splits execution. */
+/**
+ * Display a steer immediately; the receipt, not this preview, splits execution.
+ *
+ * 在消息列表中立即插入一条 steer 用户消息的乐观预览（标记 `_steerPending`）。
+ * 预览只用于展示，不代表服务端已注入；真正的分段以服务端回执为准。
+ * 按 `steer_id` 幂等：列表里已有同 ID 的用户消息（重试、升级为 inject，
+ * 或 SSE 回执先到）时直接返回它，不会重复插入。
+ *
+ * @param list 消息列表
+ * @param item steer 队列项（steer_id、content、mentioned_items）
+ * @returns 列表中对应的用户消息对象（已有的或新插入的）
+ */
 export function previewSteerMessage(list: ChatMessage[], item: { steer_id: string; content: string; mentioned_items?: unknown[] }): ChatMessage {
+  /**
+   * 它在消息列表里找一条用户消息，条件是 steer_id 与要预览的这条相同。
+   * 找到了就直接返回它，不再新建气泡。
+   * 防止同一条 steer 消息被重复插入消息列表。
+   */
   const existing = list.find(m => m.role === 'user' && m.steer_id === item.steer_id)
   if (existing) return existing
+  /**新建一个 ChatMessage */
   const message: ChatMessage = {
     id: `steer-user-${item.steer_id}`, steer_id: item.steer_id,
     role: 'user', content: item.content, mentioned_items: item.mentioned_items || [],
@@ -15,12 +32,28 @@ export function previewSteerMessage(list: ChatMessage[], item: { steer_id: strin
   return message
 }
 
+/**从消息列表里删掉某条 steer 消息的乐观预览气泡。 */
 export function discardSteerPreview(list: ChatMessage[], steerId: string): void {
   const index = list.findIndex(m => m.steer_id === steerId && m._steerPending)
   if (index >= 0) list.splice(index, 1)
 }
 
-/** Reconcile older servers that assign their own ID instead of echoing the client UUID. */
+/**
+ * Reconcile older servers that assign their own ID instead of echoing the client UUID.
+ *
+ * 请求返回后，对账消息列表里同一条 steer 消息的两个来源：
+ * 前端的乐观预览（steer_id 为 clientId，带 `_steerPending`）和
+ * SSE 回执插入的持久化行（steer_id 为 serverId），保证只留一个气泡。
+ * - 两者都在且不是同一个对象：删掉预览，保留真实行（位置与服务端数据正确），
+ *   并把预览里的 @ 提及复制过去，然后返回真实行。
+ * - 只有预览：把它的 steer_id 改成 serverId，之后 SSE 回执才能按 ID 对上。
+ * - clientId 与 serverId 相同（常见情况）：两次查找得到同一对象，原样返回。
+ *
+ * @param list     消息列表
+ * @param clientId 前端发送时生成的 steer_id
+ * @param serverId 服务端确认的 steer_id（响应缺失时调用方会传 clientId）
+ * @returns 对账后列表中的那条消息；没有 `_steerPending` 说明送达回执已到
+ */
 export function reconcileSteerMessageId(list: ChatMessage[], clientId: string, serverId: string): ChatMessage | undefined {
   const preview = list.find(m => m.role === 'user' && m.steer_id === clientId)
   const received = list.find(m => m.role === 'user' && m.steer_id === serverId)
@@ -61,6 +94,7 @@ export function persistedAssistantId(message: ChatMessage | undefined): string {
   return typeof message.id === 'string' ? message.id : ''
 }
 
+/**它把一条 assistant 消息当作一个"已经结束的分段"来封口 */
 export function sealAssistantSegment(message: ChatMessage): void {
   message.thinking = false
   message.is_completed = true
@@ -101,7 +135,9 @@ export function forkAfterInjectedUser(
   delete userMessage._steerFailed
   const existingIdx = list.indexOf(userMessage)
   if (existingIdx > 0) {
+    /**前半段的 assistant 消息 */
     const before = list[existingIdx - 1]
+    /**后半段的 assistant 消息 */
     const after = list[existingIdx + 1]
     if (
       before?.role === 'assistant' &&
@@ -109,7 +145,9 @@ export function forkAfterInjectedUser(
       after?.role === 'assistant' &&
       after.request_id === sourceAssistant.request_id
     ) {
+      // 把前半段消息及进行封口
       sealAssistantSegment(before)
+      // 把后半段重新标回“进行中”，用域重放场景
       if (after._steerReplayPending) {
         delete after._steerReplayPending
         after.is_completed = false

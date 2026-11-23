@@ -17,14 +17,12 @@ import (
 	"github.com/Tencent/WeKnora/internal/types/interfaces"
 )
 
-// apiKeyLastUsedMinInterval bounds how often we persist last_used_at per key.
-// The UI only needs minute-level freshness; throttling avoids a DB write on
-// every authenticated request under high QPS.
+//「限制每个 Key 的 last_used_at 最多多久写一次库。UI 只需要分钟级精度，节流避免高 QPS 下每个认证请求都写一次数据库。」
 const apiKeyLastUsedMinInterval = time.Minute
 
 type tenantAPIKeyService struct {
 	repo          interfaces.TenantAPIKeyRepository
-	lastUsedTouch sync.Map // key ID (uint64) -> time.Time of last persisted touch
+	lastUsedTouch sync.Map // 「Key ID → 上一次持久化（写库）最后使用时间的时间点」 「最后一次 touch（更新最后使用时间）的记录」
 }
 
 func NewTenantAPIKeyService(repo interfaces.TenantAPIKeyRepository) interfaces.TenantAPIKeyService {
@@ -83,6 +81,9 @@ func (s *tenantAPIKeyService) CreateAPIKey(
 	return &interfaces.TenantAPIKeyCreateResult{APIKey: key, Token: token}, nil
 }
 
+// AuthenticateAPIKey 验证 Key 是否有效（存在、未撤销、未过期）。
+// 有效时返回完整记录，并异步节流更新 last_used_at。
+// 所有失效情况统一返回 ErrTenantAPIKeyNotFound，避免泄露具体原因。
 func (s *tenantAPIKeyService) AuthenticateAPIKey(ctx context.Context, token string) (*types.TenantAPIKey, error) {
 	token = strings.TrimSpace(token)
 	if token == "" {
@@ -92,12 +93,15 @@ func (s *tenantAPIKeyService) AuthenticateAPIKey(ctx context.Context, token stri
 	if err != nil {
 		return nil, err
 	}
+	// 是否被软删除
 	if key.RevokedAt != nil {
 		return nil, apprepo.ErrTenantAPIKeyNotFound
 	}
+	// 是否过期
 	if key.ExpiresAt != nil && time.Now().UTC().After(key.ExpiresAt.UTC()) {
 		return nil, apprepo.ErrTenantAPIKeyNotFound
 	}
+	// 节流写库
 	s.touchAPIKeyLastUsedAsync(key.ID)
 	return key, nil
 }

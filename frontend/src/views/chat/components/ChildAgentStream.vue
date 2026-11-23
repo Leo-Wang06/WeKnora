@@ -69,17 +69,26 @@ const handler = useChatStreamHandler({ messagesList: messages, loading, isReplyi
   preserveIncompleteStreamReactive: true })
 stream.onChunk(data => { if (!closed) handler.processStreamChunk(data) })
 async function refresh() {
+  // 防重入。已关闭、正在刷新或者流已连着时直接返回。
   if (closed || refreshing || stream.isStreaming.value) return
   clearTimeout(timer)
   refreshing = true
   loading.value = true
   try {
     const response = await getMessageList({ session_id: props.task.sessionId, limit: 100, created_at: '' })
+    // await 之后重新检查组件是不是已经被关闭。
+    // 走到这个分支是因为在 getMessageList 请求还没返回时，组件被卸载了。
     if (closed) return
+    /**
+     * 本轮对话所有的消息列表。
+     * 如果有之前的消息，就复用，
+     * 如果没有就说明是第一条消息，就新建
+     */
     const rows = (response?.data || []) as ChatMessage[]
     const signature = JSON.stringify(rows)
     if (signature !== historySignature) {
-      messages.splice(0)
+      messages.splice(0) // 清空数组里所有元素
+      // 把后端返回的原始消息行（rows）加工成前端能渲染的消息，再放进 messages
       await handler.handleMsgList(rows)
       historySignature = signature
     }
@@ -88,10 +97,15 @@ async function refresh() {
     // message ID. Never mistake that presentation flag for a terminal task.
     const latest = [...messages].reverse().find(m => m.role === 'assistant')
     const waiting = isAwaitingInput(latest)
+    /**最近的一条消息，如果是未完成或者正在等待输入就把它当作要接流的目标，否则为 undefined */ 
     const pending = latest && (!latest.is_completed || waiting) ? latest : undefined
+    // 用户已经回答，并且任务状态恢复为 running，就接流
     if (pending && (!waiting || props.task.status === 'running')) {
+      // 告诉流处理器：接下来收到的流式数据，应该追加到哪一条助手消息上。
       currentAssistantMessageId.value = String(pending.id)
+      // 把“因等待用户回答而挂起”的助手消息，改回“进行中”
       if (waiting) handler.prepareResumedMessage(pending, String((pending.pending_prompt as any)?.id || ''))
+      // 继续开始流
       await stream.startStream({ session_id: props.task.sessionId, query: String(pending.id),
         method: 'GET', url: '/api/v1/sessions/continue-stream' })
       if (!closed && stream.error.value) failure.value = stream.error.value
@@ -113,6 +127,7 @@ watch(() => props.task.status, () => {
   else if (!stream.isStreaming.value) void refresh()
 })
 onMounted(refresh)
+// 组件卸载时流关闭
 onUnmounted(() => { closed = true; clearTimeout(timer); stream.stopStream() })
 </script>
 <style scoped lang="less">

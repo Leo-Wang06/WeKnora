@@ -12,9 +12,16 @@ import (
 	"github.com/Tencent/WeKnora/internal/types/interfaces"
 )
 
+// fakeTenantAPIKeyRepo 用内存替代数据库，是 TenantAPIKeyRepository 的测试替身。
+// 真实的 types.TenantAPIKey 照常使用，被替换的只有存储介质和读写方式。
 type fakeTenantAPIKeyRepo struct {
-	byHash              map[string]*types.TenantAPIKey
-	nextID              uint64
+	// byHash 是内存中的 tenant_api_keys 表，以 key_hash 为键。
+	// 选择它作 key 对应真实表的唯一索引：重复哈希会像数据库一样插入失败。
+	byHash map[string]*types.TenantAPIKey
+	// nextID 模拟数据库的自增主键，每插入一条记录后递增。
+	nextID uint64
+	// lastUsedUpdateCount 统计 UpdateAPIKeyLastUsed 被调用的次数。
+	// 测试用它断言高频认证只写一次库，即 last_used_at 的节流生效。
 	lastUsedUpdateCount int
 }
 
@@ -38,6 +45,9 @@ func TestTenantAPIKeyServiceCreateAPIKeyUsesSKPrefix(t *testing.T) {
 	}
 }
 
+// newFakeTenantAPIKeyRepo 构造一个可直接使用的内存仓储，也就是初始化。
+// byHash 必须显式初始化，否则 CreateAPIKey 写入时会因 nil map 而 panic；
+// nextID 从 1 开始，模拟数据库自增主键。
 func newFakeTenantAPIKeyRepo() *fakeTenantAPIKeyRepo {
 	return &fakeTenantAPIKeyRepo{byHash: map[string]*types.TenantAPIKey{}, nextID: 1}
 }

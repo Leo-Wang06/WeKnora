@@ -16,55 +16,53 @@ import (
 	"github.com/google/uuid"
 )
 
-// Delivery modes for a mid-run user message. Chosen at send time.
+// 运行中用户消息的投递方式，在发送时选定。
 const (
-	// steerDeliveryInject is drained into the running turn at the next
-	// round boundary (and again just before a natural stop, so the agent
-	// continues instead of finishing).
+	// steerDeliveryInject 会在下一个推理轮次的边界被取入正在运行的这一轮
+	// （并在自然停止之前再取一次，让 agent 继续而不是结束）。
 	steerDeliveryInject = "inject"
-	// steerDeliveryAfter stays in the queue until the current run exits,
-	// then becomes the query (or carry-over) of a follow-up run.
+	// steerDeliveryAfter 会一直留在队列中，直到当前运行退出，
+	// 然后成为后续运行的查询（或承接内容）。
 	steerDeliveryAfter = "after"
 )
 
-// steerDataConsumed marks a steer event the running turn has already taken
-// into its message list. It lives on the event itself (not in process memory)
-// so every replica agrees on what is still pending: the overlay, the queue
-// depth guard and the follow-up backlog all read the same flag.
+// steerDataConsumed 标记一条 steer 事件已被运行中的这一轮取入它的消息列表。
+// 这个标志保存在事件本身上（而不是进程内存里），这样所有副本对“哪些仍待处理”
+// 的判断一致：overlay、队列深度限制和后续运行的积压都读取同一个标志。
 const steerDataConsumed = "consumed"
 
-// steerDataUserMessageID is the persisted user-row ID written alongside the
-// consumed flag so a retried drain can reuse the row instead of inserting again.
+// steerDataUserMessageID 是与 consumed 标志一起写入的、已持久化的用户消息行 ID，
+// 这样重试的 drain 可以复用该行，而不是再插入一次。
 const steerDataUserMessageID = "user_message_id"
 
-// steerDataDropped marks a consumed steer event that never reached the model
-// because its user row could not be written.
+// steerDataDropped 标记一条已被消费、但因用户消息行写入失败而从未到达模型的
+// steer 事件。
 const steerDataDropped = "dropped"
 
-// SteerMessageRequest is the payload of POST /sessions/:session_id/steer.
+// SteerMessageRequest 是 POST /sessions/:session_id/steer 的请求体。
 type SteerMessageRequest struct {
-	// Optional for older clients. New clients pin delivery to the run they see
-	// and supply a stable ID so a consume event may precede the HTTP response.
+	// 对旧客户端是可选的。新客户端把投递绑定到自己看到的那一次运行，并提供稳定的 ID，
+	// 因此消费事件可能先于 HTTP 响应到达。
 	ExpectedAssistantMessageID string                 `json:"expected_assistant_message_id,omitempty"`
 	SteerID                    string                 `json:"steer_id,omitempty"`
 	Query                      string                 `json:"query" binding:"required"`
 	MentionedItems             []MentionedItemRequest `json:"mentioned_items,omitempty"`
 	Channel                    string                 `json:"channel,omitempty"`
-	// Delivery is "after" (default) or "inject". See the constants above.
+	// Delivery 为 "after"（默认）或 "inject"，见上面的常量。
 	Delivery string `json:"delivery,omitempty"`
 }
 
-// Steer request limits. maxSteerQueueDepth bounds how many messages a single
-// run can accumulate — past that the run is clearly ignoring its user and the
-// honest answer is to refuse instead of queueing silently.
+// steer 请求的限制。maxSteerQueueDepth 限制单次运行最多可累积的消息数：
+// 超过这个数，说明这次运行明显没有理会用户，如实的做法是拒绝，
+// 而不是悄悄继续排队。
 const (
 	maxSteerQueueDepth   = 10
 	maxSteerQueryLength  = 10000
 	steerDrainBatchLimit = 20
-	// maxSteerPersistAttempts bounds how often one steer's user row may fail
-	// to insert. The engine stops at the first failure to keep order, so an
-	// unwritable message would otherwise hold back every later one for the
-	// rest of the run and then fail the follow-up handoff as its query.
+	// maxSteerPersistAttempts 限制单条 steer 的用户消息行允许插入失败的次数。
+	// 为了保持顺序，引擎在第一次失败时就会停下，所以一条写不进去的消息
+	// 会拖住它之后的所有消息直到这次运行结束，随后还会让后续运行
+	// 因为拿它当查询而交接失败。
 	maxSteerPersistAttempts = 3
 )
 

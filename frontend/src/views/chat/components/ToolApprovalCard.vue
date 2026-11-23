@@ -375,6 +375,10 @@ const allowForSession = (decision: 'approve' | 'reject') => (
   decision === 'approve' && Boolean(props.grantScope) && allowInSession.value ? true : undefined
 )
 
+// 这个 submit 是工具审批卡片上"批准"或"拒绝"按钮的处理函数，
+// 位置在 ToolApprovalCard.vue:378。
+// agent 要调用某个工具前需要用户确认，用户点按钮后，这个函数把决定提交给服务端，
+// 服务端再让被挂起的 agent 继续运行或放弃这次调用。
 const submit = async (decision: 'approve' | 'reject') => {
   if (!open.value || submitting.value) return
   submitting.value = true
